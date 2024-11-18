@@ -35,6 +35,22 @@ def add_user(Mail, Username, User_type, Password):
         db.close()
     return True
 
+def change_password(Mail, Password):
+    sql_update = '''UPDATE USER SET Password = ? WHERE Mail = ?'''
+
+    db = sqlite3.connect('user.db')
+    cursor = db.cursor()
+
+    try: 
+        cursor.execute(sql_update, (Password, Mail))
+        db.commit()
+    except sqlite3.Error as e:
+        st.error(f"Errore nel database: {e}")
+        return False
+    finally:
+        db.close()
+    return True
+
 def authentication():
     """
     Gestisce il processo di autenticazione (login, registrazione, recupero password)
@@ -65,6 +81,7 @@ def authentication():
     )
 
     if option == 'Login':
+        st.write(st.session_state.users_list)
         container = st.container(border=True)
         email = container.text_input('E-Mail')
         password = container.text_input('Password', type='password')
@@ -109,9 +126,20 @@ def authentication():
         email_recovery = container.text_input('Inserisci la tua email')
         submit = st.button('Recupera Password')
         
+        # Inizializzazione delle variabili di sessione
+        if 'verify_number' not in st.session_state:
+            st.session_state.verify_number = 0
+        if 'check_user' not in st.session_state:
+            st.session_state.check_user = False
+        if 'code_recovery' not in st.session_state:
+            st.session_state.code_recovery = None
+        if 'code_verified' not in st.session_state:
+            st.session_state.code_verified = False
+
+        # Gestione dell'invio email
         if submit:
             if email_recovery in st.session_state.users_list:
-                st.success("Prosegui con procedimento di verifica")
+                st.session_state.check_user = True
                 
                 #campi della mail e invio messaggio
                 email_send = 'alessandrogobbo19@gmail.com'
@@ -119,10 +147,7 @@ def authentication():
                 password_app = 'mtea hxhm cbph tquw'
                 verify_number = randrange(0, 999)  # Codice a 6 cifre
                 
-                # Salva il codice di verifica nella session state
-                if 'verify_number' not in st.session_state:
-                    st.session_state.verify_number = verify_number
-
+                st.session_state.verify_number = verify_number
                 message = f"""
                 Il tuo codice di verifica è: {verify_number}
                 
@@ -143,21 +168,46 @@ def authentication():
                     st.success("Email inviata con successo!")
                 except Exception as e:
                     st.error(f"Errore invio della mail : {e}")
-
-                # Input per il codice di verifica
-                number = st.text_input('Inserisci il codice di verifica')
-                submit = st.button('Conferma')
-                
-                if submit:
-                    if number == f'{st.session_state.verify_number}':
-                        st.write('prova')
-                    
-                
-                st.write('Test')
-                
-                
             else:
                 st.error("Email non trovata")
+            
+        # Verifica del codice e reset password
+        if st.session_state.check_user:
+            st.title('Prosegui con verifica dell\'utente')
+            code_recovery = st.number_input('Inserisci il numero', min_value=0)
+            st.session_state.code_recovery = code_recovery
+            #mi serve per non perdere tempo a guardare la mail
+            #st.write(st.session_state.verify_number)
+
+            # Verifica del codice
+            verify_code = st.button('Verifica Codice')
+            if verify_code and st.session_state.code_recovery == st.session_state.verify_number:
+                st.session_state.code_verified = True
+                st.success('Codice verificato con successo!')
+            elif verify_code:
+                st.error('Codice non valido')
+
+            # Reset password solo dopo la verifica del codice
+            if st.session_state.code_verified:
+                new_password = st.text_input('Inserisci la nuova password', type='password')
+                ver_password = st.text_input('Inserisci nuovamente la password', type='password')
+                
+                submit_password = st.button('Cambia Password')
+                if submit_password:
+                    if new_password == ver_password:
+                        if change_password(email_recovery, new_password):
+                            st.success('Cambiamento eseguito con successo')
+                            # Reset degli stati dopo il cambio password
+                            st.session_state.check_user = False
+                            st.session_state.code_verified = False
+
+                            st.session_state.users_list = user_list()
+                            time.sleep(4)
+                            st.session_state.widget_key += 1
+                            st.rerun()
+                    else:
+                        st.error('Le password non coincidono')
+        
 
     return False, '', ''
 
