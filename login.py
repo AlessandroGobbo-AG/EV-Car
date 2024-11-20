@@ -81,7 +81,7 @@ def authentication():
     )
 
     if option == 'Login':
-        st.write(st.session_state.users_list)
+        #st.write(st.session_state.users_list)
         container = st.container(border=True)
         email = container.text_input('E-Mail')
         password = container.text_input('Password', type='password')
