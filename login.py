@@ -4,29 +4,55 @@ import time
 import smtplib 
 from email.mime.text import MIMEText
 from random import randrange
+import hashlib
 
+'''
+Gestisce il processo di estrazione degli utenti presenti nel database:
+- Viene creato un dizionario che conterrà la mail e le rispettive 
+  password e permessi
+- Avviene il colegamento al database
+- Viene creata la select
+- Viene riempito il dizionario
 
+Returns:
+    dict_mail_pass: dict, contiente come chiavi le e-mail degli utenti, con 
+                    con le rispettive password e permessi dell'utente.
+'''
 def user_list():
     dict_mail_pass = {}
-    db = sqlite3.connect('user.db')
+    db = sqlite3.connect('DATABASE/user.db')
     cursor = db.cursor()
-    cursor.execute("SELECT Mail, Password, User_Type FROM USER")
+    cursor.execute("SELECT Mail, Password, User_Type, Name_Surname  FROM USER")
     rows = cursor.fetchall()
     
     for row in rows:
-        dict_mail_pass[row[0]] = {'password': row[1], 'user_type': row[2]}
+        dict_mail_pass[row[0]] = {'password': row[1], 'user_type': row[2], 'username': row[3]}
     
     return dict_mail_pass
 
+'''
+Gestisce il processo di aggiunta di un nuovo utente sul database:
+- Viene creato l'insert
+- Si collega al database
+- La password viene Hashata con sha256
+Param: 
+    Mail: e-mail del nuovo utente
+    Username: nome e cognome del nuovo utente
+    User_type: tipologia del utente (Viewer, Sales)
+    Password: passaword del nuovo utente
+Return: 
+    boolean: True se non ci sono errori nell'aggiunta sul database, 
+             False altrimenti
+'''
 def add_user(Mail, Username, User_type, Password):
     sql_insert = '''INSERT INTO USER(Mail, Name_Surname, User_Type, Password) 
                     VALUES (?, ?, ?, ?)'''
     
-    db = sqlite3.connect('user.db')
+    db = sqlite3.connect('DATABASE/user.db')
     cursor = db.cursor()
     
     try:
-        cursor.execute(sql_insert, (Mail, Username, User_type, Password))
+        cursor.execute(sql_insert, (Mail, Username, User_type, hashlib.sha256(Password.encode('utf-8')).hexdigest()))
         db.commit()
     except sqlite3.Error as e:
         st.error(f"Errore nel database: {e}")
@@ -35,14 +61,24 @@ def add_user(Mail, Username, User_type, Password):
         db.close()
     return True
 
+'''
+Gesisce il cambio di password di un utente del database:
+- Viene creata la funzione di update
+- Avviene il collegamento al database
+- La password viene hashata con sha256
+Returns: 
+    boolean: True se avviene correttamente la modifica sul database, 
+             False altrimenti.
+'''
 def change_password(Mail, Password):
+
     sql_update = '''UPDATE USER SET Password = ? WHERE Mail = ?'''
 
-    db = sqlite3.connect('user.db')
+    db = sqlite3.connect('DATABASE/user.db')
     cursor = db.cursor()
 
     try: 
-        cursor.execute(sql_update, (Password, Mail))
+        cursor.execute(sql_update, (hashlib.sha256(Password.encode('utf-8')).hexdigest(), Mail))
         db.commit()
     except sqlite3.Error as e:
         st.error(f"Errore nel database: {e}")
@@ -51,15 +87,20 @@ def change_password(Mail, Password):
         db.close()
     return True
 
+"""
+Gestisce il processo di autenticazione (login, registrazione, recupero password)
+Returns:
+    tuple: (bool, str, str) - (autenticato, email utente, tipo utente)
+"""
 def authentication():
-    """
-    Gestisce il processo di autenticazione (login, registrazione, recupero password)
-    Returns:
-        tuple: (bool, str, str) - (autenticato, email utente, tipo utente)
-    """
-    # Inizializzazione stati
+    
+    '''
+    Inizializzazione degli session_state:
+    -User_state: 
+    '''
     if 'user_state' not in st.session_state:
         st.session_state.user_state = {
+            'mail': '',
             'username': '',
             'user_type': '',
             'logged_in': False
@@ -83,15 +124,29 @@ def authentication():
     if option == 'Login':
         #st.write(st.session_state.users_list)
         container = st.container(border=True)
-        email = container.text_input('E-Mail')
+        st.session_state.user_state['mail'] = container.text_input('E-Mail')
         password = container.text_input('Password', type='password')
+
         submit = st.button('Login')
 
+        # Aggiungi questa verifica PRIMA di processare il submit
+        if 'submitted' not in st.session_state:
+            st.session_state.submitted = None
+
         if submit:
-            if email in st.session_state.users_list and \
-               password == st.session_state.users_list[email]['password']:
+            st.session_state.submitted = True
+
+        # Usa la variabile di sessione per controllare 
+        if st.session_state.submitted:
+            if st.session_state.user_state['mail'].lower() in st.session_state.users_list and \
+            hashlib.sha256(password.encode('utf-8')).hexdigest() == st.session_state.users_list[st.session_state.user_state['mail']]['password']:
+                #st.session_state.authenticated = True
+                st.session_state.user_state['user_type'] = st.session_state.users_list[st.session_state.user_state['mail']]['user_type']
+                st.session_state.user_state['username'] = st.session_state.users_list[st.session_state.user_state['mail']]['username']
+                st.session_state.user_state['logged_in'] = True
                 st.success('Login successful!')
-                return True, email, st.session_state.users_list[email]['user_type']
+                return st.session_state.user_state['logged_in'],st.session_state.user_state['mail'],st.session_state.user_state['user_type'],st.session_state.user_state['username']
+                        
             else:
                 st.error('Invalid email or password')
 
@@ -109,7 +164,7 @@ def authentication():
         if submit:
             if mail and username and password:
                 if mail not in st.session_state.users_list:
-                    if add_user(mail, username, user_type, password):
+                    if add_user(mail.lower(), username.lower(), user_type, password):
                         st.success("Registrazione completata! Verrai indirizzato al login.")
                         st.session_state.users_list = user_list()
                         time.sleep(4)
@@ -145,12 +200,11 @@ def authentication():
                 email_send = 'alessandrogobbo19@gmail.com'
                 subject = 'Codice di verifica ALESSANDRO GOBBO'
                 password_app = 'mtea hxhm cbph tquw'
-                verify_number = randrange(0, 999)  # Codice a 6 cifre
+                verify_number = randrange(100000, 999999)  # Codice a 6 cifre
                 
                 st.session_state.verify_number = verify_number
                 message = f"""
                 Il tuo codice di verifica è: {verify_number}
-                
                 Inserisci questo codice per completare il processo di recupero password.
                 """
                 
@@ -176,8 +230,7 @@ def authentication():
             st.title('Prosegui con verifica dell\'utente')
             code_recovery = st.number_input('Inserisci il numero', min_value=0)
             st.session_state.code_recovery = code_recovery
-            #mi serve per non perdere tempo a guardare la mail
-            #st.write(st.session_state.verify_number)
+            
 
             # Verifica del codice
             verify_code = st.button('Verifica Codice')
@@ -196,25 +249,26 @@ def authentication():
                 if submit_password:
                     if new_password == ver_password:
                         if change_password(email_recovery, new_password):
-                            st.success('Cambiamento eseguito con successo')
+                            st.success('Cambiamento eseguito con successo, verrai indirizzato al login')
                             # Reset degli stati dopo il cambio password
                             st.session_state.check_user = False
                             st.session_state.code_verified = False
-
+                            del st.session_state.submitted
                             st.session_state.users_list = user_list()
-                            time.sleep(4)
+                            time.sleep(2)
                             st.session_state.widget_key += 1
                             st.rerun()
                     else:
                         st.error('Le password non coincidono')
         
 
-    return False, '', ''
+    return False, '', '', ''
 
 # Esempio di utilizzo in main.py
 if __name__ == "__main__":
-    is_authenticated, user_email, user_type = authentication()
+    is_authenticated, user_email, user_type, username = authentication()
     
     if is_authenticated:
         st.write(f"Benvenuto {user_email}")
+        st.write(f"Il tuo username è: {username}")
         st.write(f"Il tuo tipo utente è: {user_type}")
