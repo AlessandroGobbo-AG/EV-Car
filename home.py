@@ -25,7 +25,7 @@ def main():
             st.rerun()  # Ricarica la pagina per mostrare il contenuto autenticato
     else:
         # Mostra la pagina dopo il login
-        st.title(f"Benvenuto {st.session_state.user_state['username']}")
+        st.sidebar.title(f"Benvenuto {st.session_state.user_state['username']}")
         st.write(f"Email: {st.session_state.user_state['mail']}")
         st.write(f"Tipo utente: {st.session_state.user_state['user_type']}")
 

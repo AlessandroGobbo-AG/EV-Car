@@ -89,14 +89,19 @@ def change_password(Mail, Password):
 
 """
 Gestisce il processo di autenticazione (login, registrazione, recupero password)
+- Se un utente si registra o cambia la password, verrà indirizzato nuovamente al login
+- In fase di registrazione, l'utente sceglierà il suo permesso
+- Per il cambiamento della password, l'utente prima dovrà eseguire una verifica a due fattori
 Returns:
-    tuple: (bool, str, str) - (autenticato, email utente, tipo utente)
+    tuple: (bool, str, str, str) - (autenticato, email utente, tipo utente, username)
 """
 def authentication():
     
     '''
     Inizializzazione degli session_state:
-    -User_state: 
+    -user_state: inizializza gli stati dell'utente
+    -user_list: inizializza un dizionario che ha come chiave 'mail' dell'utente
+    -widget_key: sessione che mi permette di resettare per tornare alla pagina di login
     '''
     if 'user_state' not in st.session_state:
         st.session_state.user_state = {
@@ -114,13 +119,16 @@ def authentication():
 
     st.title('User Login Page')
 
-    # Selectbox con key dinamica
+    # Selectbox per scegliere l'azione 
     option = st.selectbox(
         'Choose the action',
         ("Login", "Sign Up", "Forgot Password"),
         key=f"select_{st.session_state.widget_key}"
     )
 
+    '''
+    Condizioni che servono per eseguire l'azione scelta dall'utente
+    '''
     if option == 'Login':
         #st.write(st.session_state.users_list)
         container = st.container(border=True)
@@ -129,14 +137,13 @@ def authentication():
 
         submit = st.button('Login')
 
-        # Aggiungi questa verifica PRIMA di processare il submit
         if 'submitted' not in st.session_state:
             st.session_state.submitted = None
 
         if submit:
             st.session_state.submitted = True
 
-        # Usa la variabile di sessione per controllare 
+        # Verifica che la mail sia presente del DB e che la password hashata coincida con password DB
         if st.session_state.submitted:
             if st.session_state.user_state['mail'].lower() in st.session_state.users_list and \
             hashlib.sha256(password.encode('utf-8')).hexdigest() == st.session_state.users_list[st.session_state.user_state['mail']]['password']:
@@ -154,6 +161,7 @@ def authentication():
         container = st.container(border=True)
         col1, col2 = container.columns(2)
         
+        # Compilazione dei campi dell'utente
         with container:
             mail = col1.text_input('Inserisci e-mail')
             username = col1.text_input('Inserisci nome e cognome')
@@ -161,11 +169,14 @@ def authentication():
             user_type = col2.selectbox('User Type',('Viewer', 'Sales'))
             submit = st.button('Sign Up')
 
+        # Verifica della non presenza dell'utente sul DB 
         if submit:
             if mail and username and password:
                 if mail not in st.session_state.users_list:
                     if add_user(mail.lower(), username.lower(), user_type, password):
                         st.success("Registrazione completata! Verrai indirizzato al login.")
+
+                        # Aggiorno il dizionario degli utenti una volta inserito il nuovo utente
                         st.session_state.users_list = user_list()
                         time.sleep(4)
                         st.session_state.widget_key += 1  # Incrementa la key
@@ -176,7 +187,8 @@ def authentication():
             else:
                 st.warning("Compila tutti i campi")
 
-    else:  # Forgot Password
+    # Forgot Passowrd
+    else:  
         container = st.container(border=True)
         email_recovery = container.text_input('Inserisci la tua email')
         submit = st.button('Recupera Password')
@@ -240,7 +252,7 @@ def authentication():
             elif verify_code:
                 st.error('Codice non valido')
 
-            # Reset password solo dopo la verifica del codice
+            # Cambio della password
             if st.session_state.code_verified:
                 new_password = st.text_input('Inserisci la nuova password', type='password')
                 ver_password = st.text_input('Inserisci nuovamente la password', type='password')
