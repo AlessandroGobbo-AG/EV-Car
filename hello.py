@@ -11,27 +11,42 @@ if __name__ == "__main__":
     gapminder = pl.read_csv(data_url).filter(pl.col('year')==2007)
     #st.write(gapminder)
 
-    chart = (
-        alt.Chart(gapminder).mark_circle()
-        .encode(
-            alt.X('gdpPercap').scale(type='log'),
-            alt.Y('lifeExp'),
-            alt.Color('continent'),
-            alt.Size('pop')
-        )
-    )
+    st.write(gapminder)
 
-    bar_chart = (
+
+    base_pie = (
         alt.Chart(gapminder)
-        .mark_bar()
+        .mark_arc(
+            radius=120
+        )
+        .transform_aggregate(
+            pop = 'sum(pop)',
+            groupby=['continent']
+        )
         .encode(
-            alt.X('pop', aggregate='sum'),
-            alt.Y('continent', sort='-x')
+            alt.Theta('pop'),
+            alt.Color('continent')
         )
     )
 
+    text_pie = (
+        base_pie
+        .mark_text(
+            radius=150,
+            size=15
+        )
+        .transform_calculate(
+            label = "round(datum.pop/1000000)+ 'M'"
+        )
+        .encode(
+            alt.Text('label:N'),
+            alt.Theta('pop', stack=True),
+            alt.Order('continent')
+        )
+    )
 
+    st.title('Grafico della popolazione per continente')
     st.altair_chart(
-        bar_chart,
+        base_pie+text_pie, 
         use_container_width=True
     )

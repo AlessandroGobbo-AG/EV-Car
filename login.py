@@ -93,7 +93,7 @@ Gestisce il processo di autenticazione (login, registrazione, recupero password)
 - In fase di registrazione, l'utente sceglierà il suo permesso
 - Per il cambiamento della password, l'utente prima dovrà eseguire una verifica a due fattori
 Returns:
-    tuple: (bool, str, str, str) - (autenticato, email utente, tipo utente, username)
+    tuple: (bool) - (autenticato)
 """
 def authentication():
     
@@ -134,7 +134,8 @@ def authentication():
         container = st.container(border=True)
         st.session_state.user_state['mail'] = container.text_input('E-Mail')
         password = container.text_input('Password', type='password')
-
+        #container.write(st.session_state.user_state['mail'].lower())
+        #st.write(st.session_state.users_list)
         submit = st.button('Login')
 
         if 'submitted' not in st.session_state:
@@ -146,13 +147,13 @@ def authentication():
         # Verifica che la mail sia presente del DB e che la password hashata coincida con password DB
         if st.session_state.submitted:
             if st.session_state.user_state['mail'].lower() in st.session_state.users_list and \
-            hashlib.sha256(password.encode('utf-8')).hexdigest() == st.session_state.users_list[st.session_state.user_state['mail']]['password']:
+            hashlib.sha256(password.encode('utf-8')).hexdigest() == st.session_state.users_list[st.session_state.user_state['mail'].lower()]['password']:
                 #st.session_state.authenticated = True
-                st.session_state.user_state['user_type'] = st.session_state.users_list[st.session_state.user_state['mail']]['user_type']
-                st.session_state.user_state['username'] = st.session_state.users_list[st.session_state.user_state['mail']]['username']
+                st.session_state.user_state['user_type'] = st.session_state.users_list[st.session_state.user_state['mail'].lower()]['user_type']
+                st.session_state.user_state['username'] = st.session_state.users_list[st.session_state.user_state['mail'].lower()]['username']
                 st.session_state.user_state['logged_in'] = True
                 st.success('Login successful!')
-                return st.session_state.user_state['logged_in'],st.session_state.user_state['mail'],st.session_state.user_state['user_type'],st.session_state.user_state['username']
+                return st.session_state.user_state['logged_in']
                         
             else:
                 st.error('Invalid email or password')
@@ -166,7 +167,7 @@ def authentication():
             mail = col1.text_input('Inserisci e-mail')
             username = col1.text_input('Inserisci nome e cognome')
             password = col2.text_input('Inserisci password', type='password')
-            user_type = col2.selectbox('User Type',('Viewer', 'Sales'))
+            user_type = col2.selectbox('User Type',('Analista', 'Venditore'))
             submit = st.button('Sign Up')
 
         # Verifica della non presenza dell'utente sul DB 
@@ -274,7 +275,7 @@ def authentication():
                         st.error('Le password non coincidono')
         
 
-    return False, '', '', ''
+    return False
 
 # Esempio di utilizzo in main.py
 if __name__ == "__main__":
