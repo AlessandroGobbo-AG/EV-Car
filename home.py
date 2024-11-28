@@ -1,5 +1,6 @@
 import streamlit as st
 from login import authentication
+from dashboard import dashboard_main
 
 logo_folder = 'LOGO/Logo.png'
 
@@ -80,8 +81,7 @@ if __name__ == '__main__':
             st.title('Vendita auto')
             st.write('Aggiungerai una vendita in questa pagina')
         elif page_to_see == 'Dashboard':
-            st.title('Dashboard')
-            st.write('Qui vedrai la dashboard')
+            dashboard_main()
         else: 
             st.title('Pagina Admin')
             st.write('Qui vedi la pagina di admin in cui puoi fare tante cose')
