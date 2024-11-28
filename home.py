@@ -1,7 +1,15 @@
 import streamlit as st
 from login import authentication
 
+logo_folder = 'LOGO/Logo.png'
+
+
 def logout():
+    '''
+    Funzione che gestisce la fase di logout dell'utente.
+    Resetta le session.state.user_state ad uno stato di 'vuoto'
+    Infine riavvia l'applicazione 
+    '''
     if st.sidebar.button('Logout'):
         # Reset completo dello stato dell'utente
         st.session_state.user_state['logged_in'] = False
@@ -15,7 +23,17 @@ def logout():
         
         st.rerun()
 
+
 def page_list(permission):
+    '''
+    Funzione che in base ai permessi dell'utente permette di eseguire delle azioni all'interno dell'app.
+    In base al permesso dell'utente inizializza una lista in cui sono presenti le pagine disponibili
+    Infine viene creata una selectbox che avrà come possibili scelte le liste inizializzate
+    Param:
+        permission: tipologia dell'utente che ha eseguito l'accesso
+    Return: 
+        choose: l'azione scelta dall'utente
+    '''
     match permission:
         case 'admin':
             page_list = ['Personale', 'Dashboard', 'Vendita']
@@ -30,7 +48,7 @@ def page_list(permission):
     )
     return choose
 
-def main():
+if __name__ == '__main__':
     # Inizializza lo stato di autenticazione se non esiste
     if 'user_state' not in st.session_state:
         st.session_state.user_state = {
@@ -53,18 +71,19 @@ def main():
     
     if st.session_state.user_state['logged_in']:
 
+        st.logo(logo_folder, size='large')
+
         st.sidebar.title(f"Benvenuto {st.session_state.user_state['username']}")
         page_to_see = page_list(st.session_state.user_state['user_type'])
-        
+
         if page_to_see == 'Vendita':
+            st.title('Vendita auto')
             st.write('Aggiungerai una vendita in questa pagina')
         elif page_to_see == 'Dashboard':
+            st.title('Dashboard')
             st.write('Qui vedrai la dashboard')
         else: 
+            st.title('Pagina Admin')
             st.write('Qui vedi la pagina di admin in cui puoi fare tante cose')
             
         logout()
-
-
-if __name__ == '__main__':
-    main()

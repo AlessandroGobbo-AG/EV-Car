@@ -66,6 +66,9 @@ Gesisce il cambio di password di un utente del database:
 - Viene creata la funzione di update
 - Avviene il collegamento al database
 - La password viene hashata con sha256
+Param: 
+    Mail: mail dell'utente
+    Passoword: password dell'utente
 Returns: 
     boolean: True se avviene correttamente la modifica sul database, 
              False altrimenti.
@@ -210,9 +213,9 @@ def authentication():
                 st.session_state.check_user = True
                 
                 #campi della mail e invio messaggio
-                email_send = 'alessandrogobbo19@gmail.com'
+                email_send = 'gobbo.progetto.sistemi@gmail.com'
                 subject = 'Codice di verifica ALESSANDRO GOBBO'
-                password_app = 'mtea hxhm cbph tquw'
+                password_app = 'rrin kfau fdai tqyh'
                 verify_number = randrange(100000, 999999)  # Codice a 6 cifre
                 
                 st.session_state.verify_number = verify_number
