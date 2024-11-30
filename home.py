@@ -50,6 +50,7 @@ def page_list(permission):
     return choose
 
 if __name__ == '__main__':
+    #st.set_page_config(layout='wide')
     # Inizializza lo stato di autenticazione se non esiste
     if 'user_state' not in st.session_state:
         st.session_state.user_state = {
