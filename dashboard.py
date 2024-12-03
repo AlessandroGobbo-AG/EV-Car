@@ -179,13 +179,42 @@ Param:
 '''
 def model_per_make(data, make):
 
+    '''
+    Seleziono i dati che sono essenziali per creare il grafico
+    '''
     data_agg = (
         data
         .group_by('Make', 'Model')
         .agg(
-            Vendita_per_modello = pl.col('Model').count()
+            Vendita_per_modello = pl.col('Model').count(),         
         )
         .filter(pl.col('Make').is_in(make))
+    )
+
+    '''
+    A causa di alcuni modelli che hanno poche vendite seleziono il range (<1% del totale delle auto 
+    vendute da un venditore) tale per cui tutti i modelli verranno inseriti nella categoria altro.
+    '''
+    data_agg = data_agg.with_columns(
+        pl.col('Vendita_per_modello').sum().over('Make').alias('Totale_Produttore'),
+    ).with_columns(
+        (pl.col('Vendita_per_modello') < (0.01 * (pl.col('Totale_Produttore')))).alias('OneP')
+    ).with_columns(
+        pl.when(pl.col('OneP') == True)
+        .then(pl.lit('Altro'))
+        .otherwise(pl.col('Model'))
+        .alias('Model')
+    )
+
+    '''
+    Ritorno al dataset in cui le colonne presenti saranno 'Make' - 'Model' - 'Vendita_per_modello'
+    '''
+    data_agg = (
+        data_agg
+        .group_by('Make', 'Model')
+        .agg(
+            Vendita_per_modello = pl.col('Vendita_per_modello').sum()
+        )
     )
 
     base_pie = (
@@ -220,7 +249,8 @@ def model_per_make(data, make):
         .mark_text(
             radius = 0,
             size=30,
-            color='cyan'
+            color='cyan',
+            baseline='middle'
         )
         .encode(
             alt.Text("Make:N")
@@ -236,11 +266,8 @@ def model_per_make(data, make):
         'Make', columns=3
     )
 
-    '''
-    Devo togliere dalla legenda i modelli che hanno poche vendite, altrimenti si sovrappongono, capire come fare
-    '''
-
     return(chart)
+
 
 '''
 Funzione che va a generare la pagina di dashboard
@@ -278,7 +305,7 @@ def dashboard_main():
     #QUARTO CONTAINER
     c4 = st.container(border=False)
     c4.altair_chart(model_per_make(data, st.session_state.make_selection), use_container_width=True)
-
+    
     
 if __name__ == '__main__':
     dashboard_main()
