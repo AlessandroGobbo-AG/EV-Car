@@ -1,6 +1,9 @@
 import streamlit as st
 import polars as pl
 import altair as alt
+import re
+import pydeck as pdk
+import pandas as pd
 
 '''
 Funzione che legge i dati del file csv del percorso: DATA/data.csv
@@ -268,6 +271,55 @@ def model_per_make(data, make):
 
     return(chart)
 
+'''
+Mappa 3d di dove sono state immatricolate le auto
+'''
+def map_3d(data):
+    coord_list = []
+
+    data = (
+        data.select(pl.col('Vehicle Location'))
+    )
+
+    for row in data.rows():
+        if row[0] is not None:
+            numb = re.findall(r'-?\d+\.\d+|-?\d+', row[0])
+            coord = (float(numb[0]), float(numb[1]))
+            coord_list.append(coord)
+
+    coord_chart = pd.DataFrame(coord_list, columns=['lon', 'lat'])
+    coord_chart = coord_chart.sample(n=100)
+    st.pydeck_chart(
+        pdk.Deck(
+            map_style=None,
+            initial_view_state=pdk.ViewState(
+                latitude=coord_chart['lat'].mean(),
+                longitude=coord_chart['lon'].mean(),
+                zoom=8,
+                pitch=60,
+            ),
+            layers=[
+                pdk.Layer(
+                    "HexagonLayer",
+                    data=coord_chart,
+                    get_position="[lon, lat]",
+                    radius=2000,
+                    elevation_scale=50,
+                    elevation_range=[100, 1000],
+                    pickable=True,
+                    extruded=True,
+                ),
+                pdk.Layer(
+                    "ScatterplotLayer",
+                    data=coord_chart,
+                    get_position="[lon, lat]",
+                    get_color="[200, 30, 0, 160]",
+                    get_radius=200,
+                ),
+            ],
+        )
+    )
+
 
 '''
 Funzione che va a generare la pagina di dashboard
@@ -305,6 +357,11 @@ def dashboard_main():
     #QUARTO CONTAINER
     c4 = st.container(border=False)
     c4.altair_chart(model_per_make(data, st.session_state.make_selection), use_container_width=True)
+
+    #QUINTO CONTAINE
+    c5 = st.container(border=True)
+    map_3d(data)
+
     
     
 if __name__ == '__main__':

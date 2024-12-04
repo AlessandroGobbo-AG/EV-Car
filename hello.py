@@ -1,52 +1,67 @@
-import polars as pl
 import streamlit as st
-import altair as alt
+import pandas as pd
+import numpy as np
+import pydeck as pdk
+import re
+import kagglehub
 
+# Download latest version
+path = kagglehub.dataset_download("ratikkakkar/electric-vehicle-population-data")
 
+print("Path to dataset files:", path)
 
-if __name__ == "__main__":
-    st.title('Prima prova libreria ALTAIR')
-    data_url = "https://www.dei.unipd.it/~ceccarello/data/gapminder.csv"
-    
-    gapminder = pl.read_csv(data_url).filter(pl.col('year')==2007)
-    #st.write(gapminder)
+import polars as pl
+data = pl.read_csv(path+'/Electric_Vehicle_Population_Data.csv')
 
-    st.write(gapminder)
+data = data.select(pl.exclude(['VIN (1-10)','Postal Code','Base MSRP','Legislative District','DOL Vehicle ID','Electric Utility','2020 Census Tract']))
 
+data = data.select(pl.exclude('Clean Alternative Fuel Vehicle (CAFV) Eligibility'))
 
-    base_pie = (
-        alt.Chart(gapminder)
-        .mark_arc(
-            radius=120
-        )
-        .transform_aggregate(
-            pop = 'sum(pop)',
-            groupby=['continent']
-        )
-        .encode(
-            alt.Theta('pop'),
-            alt.Color('continent')
-        )
+coord_list = []
+
+data = (
+    data
+    .filter(pl.col('Make') == 'TESLA')
+    .select(pl.col('Vehicle Location'))
+)
+
+for row in data.rows():
+    if row[0] is not None:
+        numb = re.findall(r'\d+\.\d+|\d+', row[0])
+        coord = (float(numb[0]), float(numb[1]))
+        coord_list.append(coord)
+
+coord_chart = pd.DataFrame(coord_list, columns=['lat', 'lon'])
+
+st.write(coord_chart)
+
+st.pydeck_chart(
+    pdk.Deck(
+        map_style=None,
+        initial_view_state=pdk.ViewState(
+            latitude=122,
+            longitude=47,
+            zoom=11,
+            pitch=50,
+        ),
+        layers=[
+            pdk.Layer(
+                "HexagonLayer",
+                data=coord_chart,
+                get_position="[lon, lat]",
+                radius=200,
+                elevation_scale=4,
+                elevation_range=[0, 1000],
+                pickable=True,
+                extruded=True,
+            ),
+            pdk.Layer(
+                "ScatterplotLayer",
+                data=coord_chart,
+                get_position="[lon, lat]",
+                get_color="[200, 30, 0, 160]",
+                get_radius=200,
+            ),
+        ],
     )
-
-    text_pie = (
-        base_pie
-        .mark_text(
-            radius=150,
-            size=15
-        )
-        .transform_calculate(
-            label = "round(datum.pop/1000000)+ 'M'"
-        )
-        .encode(
-            alt.Text('label:N'),
-            alt.Theta('pop', stack=True),
-            alt.Order('continent')
-        )
-    )
-
-    st.title('Grafico della popolazione per continente')
-    st.altair_chart(
-        base_pie+text_pie, 
-        use_container_width=True
-    )
+)
