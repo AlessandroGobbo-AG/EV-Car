@@ -63,14 +63,17 @@ Return:
     text: testo della spiegazione
 '''
 def text_year_pop_chart(number):
-    text = f'''Dal grafico si nota come anno dopo anno
-            la vendita di auto con motore elettrico o ibrido aumenta in modo 
-            costante nello stato di Washington.  
+    text = f'''Dal grafico si nota come il trend sia in costante crescita
+            , presentando un periodo di inversione di trend causata dalla pandemia di
+            Covid19.  
             :orange[***Considerazioni***]  
-            **1)** Il totale di auto vendute per questa analisi è:  
+            **1)** Il dataset non presenta tutte le auto BEV/PHEV immatricolato nello stato 
+            di Washington, i dati sono stati ricavati dal sito Data.gov, (si guardi documentazione).  
+            **2)** Il totale di auto vendute per questa analisi è:  
             :orange-background[**{number}**]  
-            **2)** Si nota come tra il 2018 e i due anni successivi: 2019 e 2020, la crescita si sia
-            bloccata, passando ad un calo, a causa della pandemia di covid19.
+            **3)** I dati sono stati scaricati in data 10-12-2024, e l'ultimo aggiornamento al dataset
+            è stato eseguito in data 22-11-2024
+            
             '''
     return(text)
 
@@ -101,16 +104,27 @@ Testo che spiega il grafico che sarà presente alla destra della spiegazione
 Return:
     text: testo della spiegazione
 '''
-def text_make_pop_data():
+def text_make_pop_data(data):
+    data_mod = (
+        data
+        .group_by('Make')
+        .agg(
+            Vendita = pl.col('Make').count()
+        )
+        .sort('Vendita', descending = True)
+        .select('Make')
+    )
+
+    data_list = data_mod.rows()[0:4]
     text = f'''Nella tabella presente di lato si vede quante auto
             sono state vendute da ogni venditore presente nello stato di washington 
-            dal 2011 al 2023 (non fino alla fine).  
+            dal 2011 al 2024, inoltre sono presenti i dati delle auto ordinate che 
+            verranno consegnate nel 2025.  
             :orange[***Marchi più venduti***]  
-            • **TESLA**  
-            • **NISSAN**  
-            • **CHEVROLET**  
-            • **BMW**    
-            :orange[***Considerazioni***]  
+            •{
+                '\n•'.join( [ element[0] for element in data_list])
+            }
+            \n:orange[***Considerazioni***]  
             Nelle prossime analisi si vedranno quali sono i modelli più venduti
             e cercheremo di capire i motivi. '''
     return(text)
@@ -140,7 +154,8 @@ Param:
 Return:
     chart: grafico a linee
 '''
-def make_per_year(data, make):
+def make_per_year (data, make):
+
     data = (
         data
         .group_by('Make', 'Model Year')
@@ -150,25 +165,32 @@ def make_per_year(data, make):
         .filter(pl.col('Make').is_in(make))
     )
 
-    chart = (
-        alt.Chart(data)
-        .mark_line(
-            point=alt.OverlayMarkDef()
-        )
-        .encode(
-            x = 'Model Year:O',
-            y = 'Vendita_per_marca:Q',
-            color= alt.Color(
+    chart = alt.Chart(data).encode( 
+        color= alt.Color(
                 'Make:N',
                 scale=alt.Scale(range=['#A40E4C','#F49D6E','#F5D6BA'])
             )
-        )
-        .properties(
-            width=500
-        )
+    ).properties(
+        width = 750
     )
 
-    return(chart)
+    line = chart.mark_line().encode(
+        x = 'Model Year:O',
+        y = 'Vendita_per_marca:Q'
+    )
+
+    label = chart.encode(
+        x = 'max(Model Year):O',
+        y = alt.Y('Vendita_per_marca:Q').aggregate(argmax='Model Year'),
+        text = 'Make'
+    )
+
+    text = label.mark_text(align='left', dx = 4)
+
+    circle = label.mark_circle()
+
+    return line + text + circle
+
 
 '''
 Funzione che va a generare grafici a torta per ogni produttore scelto dall'utente.
@@ -204,7 +226,7 @@ def model_per_make(data, make):
         (pl.col('Vendita_per_modello') < (0.01 * (pl.col('Totale_Produttore')))).alias('OneP')
     ).with_columns(
         pl.when(pl.col('OneP') == True)
-        .then(pl.lit('Altro'))
+        .then(pl.lit('ALTRO'))
         .otherwise(pl.col('Model'))
         .alias('Model')
     )
@@ -272,30 +294,41 @@ def model_per_make(data, make):
     return(chart)
 
 '''
-Mappa 3d di dove sono state immatricolate le auto
+Funzione che crea una mappa con visualizzazione 3D in cui si vede
+dove sono state immatricatolate le auto nello stato di Washington 
+andando a creare una specie di scatterplot in cui le barre più elevate
+indicano una zona in cui l'immatricolazione delle auto è maggiore. 
+
+Param: 
+    dataframe: dataframe dei dati 
 '''
 def map_3d(data):
     coord_list = []
 
+    #selezione dei dati da usare
     data = (
         data.select(pl.col('Vehicle Location'))
     )
 
+    #manipolazione della colonna della geolocalizzazione
     for row in data.rows():
         if row[0] is not None:
             numb = re.findall(r'-?\d+\.\d+|-?\d+', row[0])
             coord = (float(numb[0]), float(numb[1]))
             coord_list.append(coord)
 
+    #creazione del dataframe utile per la creazione del grafico
     coord_chart = pd.DataFrame(coord_list, columns=['lon', 'lat'])
     coord_chart = coord_chart.sample(n=100)
-    st.pydeck_chart(
+
+    #creazione del grafico tramite libreria PyDeck
+    return(
         pdk.Deck(
             map_style=None,
             initial_view_state=pdk.ViewState(
-                latitude=coord_chart['lat'].mean(),
-                longitude=coord_chart['lon'].mean(),
-                zoom=8,
+                latitude=48,
+                longitude=-122,
+                zoom=7,
                 pitch=60,
             ),
             layers=[
@@ -321,6 +354,72 @@ def map_3d(data):
     )
 
 
+def engine_type_per_make (data, make):
+
+    data_type_engine = (
+        data
+        .group_by('Make', 'Electric Vehicle Type')
+        .agg(
+            Engine = pl.col('Electric Vehicle Type').count()
+        )
+        .filter(
+            pl.col('Make').is_in(make)
+        )
+    )
+
+    base_pie = (
+        alt.Chart(data_type_engine)
+        .mark_arc(
+            radius = 80,
+            radius2 = 120,
+            cornerRadius=20
+        )
+        .encode(
+            alt.Color('Electric Vehicle Type:N').legend(None),
+            alt.Theta('Engine:Q')
+        )
+    )
+
+    text_pie = (
+        alt.Chart(data_type_engine)
+        .mark_text(
+            radius = 150,
+            size = 15,
+            color='cyan'
+        )
+        .encode(
+            alt.Text('Electric Vehicle Type:N'),
+            alt.Theta('Engine:Q', stack=True),
+            alt.Order('Electric Vehicle Type:N')
+        )
+    )
+
+    text_total = (
+        alt.Chart(data_type_engine)
+        .mark_text(
+            radius = 0,
+            size=30,
+            color='cyan',
+            baseline='middle'
+        )
+        .encode(
+            alt.Text("Make:N")
+        )
+    )
+
+    chart = (
+        base_pie+text_pie+text_total
+    ).properties(
+        height = 30,
+        width = 30
+    ).facet(
+        'Make', columns=3
+    )
+
+
+    return chart
+
+
 '''
 Funzione che va a generare la pagina di dashboard
 '''
@@ -332,8 +431,9 @@ def dashboard_main():
     st.divider()
     
     #PRIMO CONTAINER
-    st.subheader('Vendita annuale auto BEV/PHEV')
+    st.title('Vendita auto BEV/PHEV')
     c1 = st.container(border=False)
+
     col1c1, col2c1 = c1.columns(2)
 
     col1c1.altair_chart(year_pop_chart(data), use_container_width=True)
@@ -341,28 +441,40 @@ def dashboard_main():
 
     #SECONDO CONTAINER
     c2 = st.container(border=False)
-    c2.subheader('Analisi per marca')
+    c2.subheader('Totale Vendite')
 
     col1c2, col2c2 = c2.columns(2)
     col2c2.dataframe(make_pop_data(data))
-    col1c2.markdown(text_make_pop_data())
-
-    #TERZO CONTAINER
-
-    c3 = st.container(border=False)
-    st.session_state.make_selection = c3.multiselect('Scegli al massimo 3 marchi',make_list(data), max_selections=3, default=['TESLA'])
-
-    c3.altair_chart(make_per_year(data, st.session_state.make_selection))
-
-    #QUARTO CONTAINER
-    c4 = st.container(border=False)
-    c4.altair_chart(model_per_make(data, st.session_state.make_selection), use_container_width=True)
-
-    #QUINTO CONTAINE
-    c5 = st.container(border=True)
-    map_3d(data)
-
+    col1c2.markdown(text_make_pop_data(data))
     
+    
+    #TERZO CONTAINE
+    c3 = st.container(border=False)
+    c3.title('Distribuzione vendite stato Washington')
+    c3.pydeck_chart(map_3d(data))
+
+    st.divider()
+    
+    #QUARTO CONTAINER
+
+    c4 = st.container(border=False)
+    c4.title('Analisi vendita per produttore')
+
+    st.session_state.make_selection = c4.multiselect('''E' possibile scegliere al massimo 3 marchi''',
+                                                     make_list(data), max_selections=3, default=['TESLA'])
+    
+    c4.altair_chart(make_per_year(data, st.session_state.make_selection))
+
+    #QUINTO CONTAINER
+    c5 = st.container(border=False)
+    c5.subheader('Analisi vendita per modello')
+    c5.altair_chart(model_per_make(data, st.session_state.make_selection), use_container_width=True)
+
+    #SESTO CONTAINER
+    c6 = st.container(border=False)
+    c6.subheader('Analisi vendita per tipologia di motore')
+    c6.altair_chart(engine_type_per_make(data, st.session_state.make_selection))
+
     
 if __name__ == '__main__':
     dashboard_main()

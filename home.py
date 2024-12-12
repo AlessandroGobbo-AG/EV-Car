@@ -4,6 +4,7 @@ from dashboard import dashboard_main
 
 logo_folder = 'LOGO/Logo.png'
 
+st.set_page_config(layout='wide')
 
 def logout():
     '''
