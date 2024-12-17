@@ -10,4 +10,5 @@ dependencies = [
     "kagglehub>=0.3.4",
     "polars>=1.14.0",
     "streamlit>=1.40.1",
+    "watchdog>=6.0.0",
 ]

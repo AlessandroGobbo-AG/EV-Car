@@ -4,6 +4,7 @@ import altair as alt
 import re
 import pydeck as pdk
 import pandas as pd
+from pathlib import Path
 
 '''
 Funzione che legge i dati del file csv del percorso: DATA/data.csv
@@ -13,9 +14,9 @@ Return:
 '''
 @st.cache_data
 def read_data():
-    data = pl.read_csv('DATA/data.csv')
+    data_dir = Path('DATA')
+    data = pl.read_csv( data_dir/'data.csv')
     return data
-
 
 '''
 Funzione che ritorna un diagramma a barre in cui l'asse delle X rappresenta gli anni, mentre
@@ -168,7 +169,7 @@ def make_per_year (data, make):
     chart = alt.Chart(data).encode( 
         color= alt.Color(
                 'Make:N',
-                scale=alt.Scale(range=['#A40E4C','#F49D6E','#F5D6BA'])
+                scale=alt.Scale(scheme='darkred')
             )
     ).properties(
         width = 750
@@ -251,16 +252,17 @@ def model_per_make(data, make):
         )
         .encode(
             alt.Theta('Vendita_per_modello:Q'),
-            alt.Color('Model:N').legend(None)
-        )
-    )
+            alt.Color('Model:N',
+                      scale=alt.Scale(scheme='darkred')).legend(None)
+        ) 
+    )  
 
     text_pie = (
         alt.Chart(data_agg)
         .mark_text(
             radius = 150,
-            size = 15,
-            color='cyan'
+            size = 12,
+            color='white'
         )
         .encode(
             alt.Text('Model:N'),
@@ -285,10 +287,12 @@ def model_per_make(data, make):
     chart = (
         base_pie+text_pie+text_total
     ).properties(
-        height = 30,
-        width = 30
+        height = 60,
+        width = 60
     ).facet(
         'Make', columns=3
+    ).resolve_scale(
+        color='independent'
     )
 
     return(chart)
@@ -353,7 +357,17 @@ def map_3d(data):
         )
     )
 
+'''
+Funzione che crea grafici a torta in cui si vede come sono distribuite le auto immatricolate
+per marca rispetto alla tipologia di motore. 
 
+Param: 
+    dataset: dataset dei dati
+    list: lista delle marche che si desidera analizzare
+
+Return: 
+    chart: grafici che rappresentano la distribuzione dei motori
+'''
 def engine_type_per_make (data, make):
 
     data_type_engine = (
@@ -367,6 +381,13 @@ def engine_type_per_make (data, make):
         )
     )
 
+    data_type_engine = data_type_engine.with_columns(
+        pl.col('Electric Vehicle Type').replace({
+            'Plug-in Hybrid Electric Vehicle (PHEV)': 'PHEV',
+            'Battery Electric Vehicle (BEV)': 'BEV'
+        })
+    )
+
     base_pie = (
         alt.Chart(data_type_engine)
         .mark_arc(
@@ -375,7 +396,8 @@ def engine_type_per_make (data, make):
             cornerRadius=20
         )
         .encode(
-            alt.Color('Electric Vehicle Type:N').legend(None),
+            alt.Color('Electric Vehicle Type:N',
+                      scale=alt.Scale(scheme='darkred')).legend(None),
             alt.Theta('Engine:Q')
         )
     )
@@ -410,15 +432,41 @@ def engine_type_per_make (data, make):
     chart = (
         base_pie+text_pie+text_total
     ).properties(
-        height = 30,
-        width = 30
+        height = 45,
+        width = 45
     ).facet(
         'Make', columns=3
+    ).resolve_scale(
+        color='independent'
     )
 
 
     return chart
 
+
+'''
+Funzione che mi crea una lista dei produttore che hanno venduto almeno il 0.5% delle auto presenti
+nel dataset. 
+
+Param
+    dataset: dataset dei dati
+
+Return
+    list: lista contenente i produttori di auto con almneo 0.5% di vendite
+'''
+def maker_list_over_25(data):
+
+    data = (
+        data
+        
+        .group_by('Make')
+        .agg(
+            Vendita_per_marca = (pl.col('Make').count() / len(data)*100).round(3)
+        )
+        .filter(pl.col('Vendita_per_marca') > .5)
+    )
+
+    return data['Make'].unique().sort().to_list()
 
 '''
 Funzione che va a generare la pagina di dashboard
@@ -460,6 +508,7 @@ def dashboard_main():
     c4 = st.container(border=False)
     c4.title('Analisi vendita per produttore')
 
+    #make_selection è una lista di al massimo 3 marchi
     st.session_state.make_selection = c4.multiselect('''E' possibile scegliere al massimo 3 marchi''',
                                                      make_list(data), max_selections=3, default=['TESLA'])
     
@@ -475,6 +524,20 @@ def dashboard_main():
     c6.subheader('Analisi vendita per tipologia di motore')
     c6.altair_chart(engine_type_per_make(data, st.session_state.make_selection))
 
+    #SETTIMO CONTAINER
+    c7 = st.container(border = True)
+    c7.subheader('Analisi per produttore')
+
+    c7.write('''In questa parte del programma, la lista di produttori è minore rispetto 
+             all'originale, questo perchè per creare dei report più soddisfacenti è stata fatta una scelta,
+             a seguito di un'analisi, di eliminare i produttore di auto che hanno venduto meno dello 0.5% delle
+             auto presenti nel dataset.''')
+
+    #è una stringa di al massimo un marchio
+    st.session_state.prod_selection = c7.selectbox('''E' possibile scegliere al massimo UN marchio''',
+                                                     maker_list_over_25(data))
+    
+    #c7.write(maker_list_over_25(data))
     
 if __name__ == '__main__':
     dashboard_main()
