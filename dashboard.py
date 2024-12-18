@@ -169,7 +169,7 @@ def make_per_year (data, make):
     chart = alt.Chart(data).encode( 
         color= alt.Color(
                 'Make:N',
-                scale=alt.Scale(scheme='darkred')
+                scale=alt.Scale(scheme='oranges')
             )
     ).properties(
         width = 750
@@ -253,7 +253,7 @@ def model_per_make(data, make):
         .encode(
             alt.Theta('Vendita_per_modello:Q'),
             alt.Color('Model:N',
-                      scale=alt.Scale(scheme='darkred')).legend(None)
+                      scale=alt.Scale(scheme='oranges')).legend(None)
         ) 
     )  
 
@@ -397,7 +397,7 @@ def engine_type_per_make (data, make):
         )
         .encode(
             alt.Color('Electric Vehicle Type:N',
-                      scale=alt.Scale(scheme='darkred')).legend(None),
+                      scale=alt.Scale(scheme='oranges')).legend(None),
             alt.Theta('Engine:Q')
         )
     )
@@ -445,20 +445,19 @@ def engine_type_per_make (data, make):
 
 
 '''
-Funzione che mi crea una lista dei produttore che hanno venduto almeno il 0.5% delle auto presenti
+Funzione che mi crea una lista dei produttore che hanno venduto almeno il 0.25% delle auto presenti
 nel dataset. 
 
 Param
     dataset: dataset dei dati
 
 Return
-    list: lista contenente i produttori di auto con almneo 0.5% di vendite
+    list: lista contenente i produttori di auto con almneo 0.25% di vendite
 '''
 def maker_list_over_25(data):
 
     data = (
         data
-        
         .group_by('Make')
         .agg(
             Vendita_per_marca = (pl.col('Make').count() / len(data)*100).round(3)
@@ -467,6 +466,103 @@ def maker_list_over_25(data):
     )
 
     return data['Make'].unique().sort().to_list()
+
+
+'''
+Funzione che mi crea un piccolo report sul produttore che viene selezionato
+'''
+def maker_small_report(data, maker, model_list): 
+
+    # Primo anno in cui il produttore ha venduto un auto nello stato di Washington
+    first_year = (
+        data
+        .filter(pl.col('Make') == maker)
+        .select(pl.col('Model Year')).min().item()
+    )
+
+    # Numero di auto vendute dal produttore nello stato di Washington
+    sell_car_count = (
+        data
+        .filter(pl.col('Make')== maker)
+        .select(pl.col('Make')).count().item()  
+    )
+
+    # Numero di modelli venduti dal produttore nello stato di Washington
+    total_model_make = (
+        data
+        .filter(pl.col('Make') == maker)
+        .select(pl.col('Model')).unique().count().item()
+    )
+
+    data = (
+        data
+        .group_by('Make', 'Model', 'Model Year')
+        .agg(
+            Total = pl.col('Model').count()
+        )
+        .filter(pl.col('Make')==maker)
+        .filter(pl.col('Model').is_in(model_list))
+        .filter(pl.col('Total')>15)
+        .sort(pl.col('Model Year'))
+    )
+
+    chart = alt.Chart(data).encode( 
+        color= alt.Color(
+                'Model:N',
+                scale=alt.Scale(scheme='oranges')
+            )
+    ).properties(
+        width = 750
+    )
+
+    line = chart.mark_line().encode(
+        x = 'Model Year:O',
+        y = 'Total:Q'
+    )
+
+    label = chart.encode(
+        x = 'max(Model Year):O',
+        y = alt.Y('Total:Q').aggregate(argmax='Model Year'),
+        text = 'Model'
+    )
+
+    text = label.mark_text(align='left', dx = 4)
+
+    circle = label.mark_circle()
+
+    compl_chart = line+text+circle
+
+    #return line + text + circle
+
+    return first_year, sell_car_count, total_model_make, compl_chart
+
+
+'''
+Funzione che in base al produttore che viene passato come parametro
+ritorna una lista contenente i modelli delle auto ordinati in base al numero 
+di auto vendute per quel modello
+
+Param: 
+    dataframe: dataframe dei dati
+    string: nome del produttore
+
+Return: 
+    list: lista contenente i modelli del produttore
+'''
+def model_list_by_maker(data, make):
+
+    data = (
+        data
+        .filter(pl.col('Make') == make)
+        .group_by('Make', 'Model')
+        .agg(
+            Total = pl.col('Model').count()
+        )
+        .sort('Total', descending = True)
+    )
+
+
+    return data['Model'].to_list()
 
 '''
 Funzione che va a generare la pagina di dashboard
@@ -526,18 +622,45 @@ def dashboard_main():
 
     #SETTIMO CONTAINER
     c7 = st.container(border = True)
+    
     c7.subheader('Analisi per produttore')
 
     c7.write('''In questa parte del programma, la lista di produttori è minore rispetto 
              all'originale, questo perchè per creare dei report più soddisfacenti è stata fatta una scelta,
-             a seguito di un'analisi, di eliminare i produttore di auto che hanno venduto meno dello 0.5% delle
+             a seguito di un'analisi, di eliminare i produttore di auto che hanno venduto meno dello 0.25% delle
              auto presenti nel dataset.''')
 
     #è una stringa di al massimo un marchio
     st.session_state.prod_selection = c7.selectbox('''E' possibile scegliere al massimo UN marchio''',
                                                      maker_list_over_25(data))
     
-    #c7.write(maker_list_over_25(data))
+    st.session_state.model_list = model_list_by_maker(data, st.session_state.prod_selection)
+    
+    c7.divider()
+
+    c7.markdown(f'''<h2 style='text-align: center;'>
+                Report del produttore: 
+                <span style='color: orange; font-weight: bold;'>{st.session_state.prod_selection}</span>
+                </h2>''', 
+                unsafe_allow_html=True)
+
+    col1c7, col2c7 = c7.columns(spec=[.2,.8])
+    
+    st.session_state.model_selection = col2c7.multiselect("E' possibile scegliere al massimo 2 modelli",
+                                                      st.session_state.model_list,
+                                                      max_selections=2, default=st.session_state.model_list[0])
+
+    st.session_state.report = maker_small_report(data,
+                                               st.session_state.prod_selection,
+                                               st.session_state.model_selection)
+    
+    
+    
+    col1c7.metric(label="**Primo anno di vendita**", value=st.session_state.report[0])
+    col1c7.metric(label="**Totale auto vendute**", value=st.session_state.report[1])
+    col1c7.metric(label="**Numero di modelli venduti**", value = st.session_state.report[2])
+
+    col2c7.altair_chart(st.session_state.report[3], use_container_width=True)
     
 if __name__ == '__main__':
     dashboard_main()
