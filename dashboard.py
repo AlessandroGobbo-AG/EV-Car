@@ -705,11 +705,11 @@ def engine_distribution(data):
 
     base = (
         alt.Chart(data)
-        .mark_bar(cornerRadiusTopLeft=3, cornerRadiusTopRight=3)
+        .mark_bar(cornerRadiusTopLeft=3, cornerRadiusTopRight=3, opacity=0.8)
         .encode(
             x = ('Electric Range:Q'),
             y = alt.Y('Count:Q'),
-            color= alt.Color('Electric Vehicle Type:N', scale=alt.Scale(scheme='oranges'))
+            color= alt.Color('Electric Vehicle Type:N', scale=alt.Scale(scheme='purpleorange'))
         )
         .properties(width=800)  
         
@@ -762,6 +762,38 @@ def range_label(data):
     return (car_count, round(data_mean,2),
             data_mean_by_engine.row(0)[1],data_mean_by_engine.row(0)[2],
             data_mean_by_engine.row(1)[1],data_mean_by_engine.row(1)[2])
+
+
+@st.cache_data
+def strip_plot(_data):
+
+    data_strip_plot = (
+        _data
+        .select('Make', 'Electric Range', 'Electric Vehicle Type')
+        .filter(pl.col('Electric Range') > 0 )
+    )
+    data_strip_plot = data_strip_plot.with_columns(
+        pl.col('Electric Vehicle Type').replace({
+            'Plug-in Hybrid Electric Vehicle (PHEV)': 'PHEV',
+            'Battery Electric Vehicle (BEV)': 'BEV'
+        })
+    )
+
+    gaussian_jitter = alt.Chart(data_strip_plot).mark_circle(size = 8).encode(
+        y = 'Electric Vehicle Type:N',
+        x = 'Electric Range:Q',
+        yOffset='jitter:Q',
+        
+        color=alt.Color('Electric Vehicle Type:N', scale=alt.Scale(scheme='oranges')).legend(None)
+    ).transform_calculate(
+        jitter = "sqrt(-2*log(random()))*cos(2*PI*random())"
+    ).properties(
+        height= 500,
+        width = 650
+    )
+
+    return gaussian_jitter.resolve_scale(yOffset='independent')
+
 
 
 '''
@@ -905,6 +937,23 @@ def dashboard_main():
     col2c9.write(electric_range_result[1])
     col1c9.subheader('Spiegazione')
     
+    #DECIMO CONTAINER
+    st.divider()
+    c10 = st.container()
+
+    col1c10, col2c10 = c10.columns(spec=[0.8, 0.2])
+    col1c10.altair_chart(strip_plot(data))
+    col2c10.subheader('Spiegazione')
+
+    #UNDICESIMO CONTAINER
+    st.divider()
+    
+    c11 = st.container()
+
+    col1c11, col2c11 = c11.columns(spec=[0.2, 0.8])
+
+    col1c11.subheader('Spiegazione')
+
 if __name__ == '__main__':
     dashboard_main()
     
