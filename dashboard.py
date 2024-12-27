@@ -564,6 +564,104 @@ def model_list_by_maker(data, make):
 
     return data['Model'].to_list()
 
+
+'''
+Funzione che mi genera un grafico con l'autonomia massima e minima per ogni produttore
+'''
+def electric_range(data):
+    data_range_prod = (
+        data
+        .select('Make', 'Electric Range', 'Electric Vehicle Type')
+        .filter(pl.col('Electric Range') > 0 )
+    )
+    data_range_prod = data_range_prod.with_columns(
+        pl.col('Electric Vehicle Type').replace({
+            'Plug-in Hybrid Electric Vehicle (PHEV)': 'PHEV',
+            'Battery Electric Vehicle (BEV)': 'BEV'
+        })
+    )
+
+    range_graph = (
+        data_range_prod
+        .group_by('Make','Electric Range', )
+        .agg(
+            Count = pl.col('Electric Range').count()
+        )
+        .sort('Make')
+    )
+
+    make_list = (
+        data_range_prod
+        .group_by('Make')
+        .agg(
+            Count = pl.col('Make').count()/data_range_prod.height*100
+        )
+        .filter(pl.col('Count') > 0.5)
+    )
+
+    make_list = make_list['Make'].unique().sort().to_list()
+    
+    filtered_data = (
+        range_graph
+        .group_by("Make")
+        .agg([
+            pl.col("Electric Range").max().alias("Max Range"),
+            pl.col("Electric Range").min().alias("Min Range"),
+        ])
+        #.filter((pl.col("max_Electric_Range") - pl.col("min_Electric_Range")) < 5)
+    )
+
+    tot_electric_range = filtered_data
+
+    filtered_data = (
+        filtered_data
+        .filter((pl.col("Max Range") - pl.col("Min Range")) < 5)
+    )
+
+    filter_list = filtered_data['Make'].unique().sort().to_list()
+    
+    range_graph_filt = (
+        range_graph
+        .filter(pl.col('Make').is_in(list(set(make_list) - set(filter_list))))
+    )
+    bar = (
+        alt.Chart(range_graph_filt)
+        .mark_bar(cornerRadius=10, height=10)
+        .encode(
+            x = alt.X('min(Electric Range):Q').scale(domain=[-15, 350]).title('Electric Range'),
+            x2 = 'max(Electric Range):Q',
+            y = alt.Y('Make:N', sort = '-x').title(None),
+            color=alt.value('orange')
+        )
+    )
+
+    text_min = (
+        alt.Chart(range_graph_filt)
+        .mark_text(align='right', dx = -5, color='white')
+        .encode(
+            x = 'min(Electric Range):Q',
+            y = alt.Y('Make:N'),
+            text = 'min(Electric Range):Q'
+        )
+    )
+
+    text_max = (
+        alt.Chart(range_graph_filt)
+        .mark_text(align='left', dx = 5, color='whitesmoke')
+        .encode(
+            x = 'max(Electric Range):Q',
+            y = alt.Y('Make:N'),
+            text = 'max(Electric Range):Q'
+        )
+    )
+
+    (bar + text_min + text_max).properties(
+        title = alt.Title(text = 'Electric Range')
+    )
+    return (bar + text_min + text_max).properties(
+        title = alt.Title(text = 'Electric Range')
+    ), tot_electric_range
+
 '''
 Funzione che va a generare la pagina di dashboard
 '''
@@ -661,6 +759,17 @@ def dashboard_main():
     col1c7.metric(label="**Numero di modelli venduti**", value = st.session_state.report[2])
 
     col2c7.altair_chart(st.session_state.report[3], use_container_width=True)
+
+    st.divider()
+
+    st.subheader('Analisi tecnica delle auto')
+
+    c8 = st.container()
+    electric_range_result = electric_range(data)
+    col1c8, col2c8, col3c8 = c8.columns(3)
+    col3c8.altair_chart(electric_range_result[0])
+    col2c8.write(electric_range_result[1])
+    col1c8.subheader('Spiegazione')
     
 if __name__ == '__main__':
     dashboard_main()

@@ -5,6 +5,7 @@ import smtplib
 from email.mime.text import MIMEText
 from random import randrange
 import hashlib
+from pathlib import Path
 
 '''
 Gestisce il processo di estrazione degli utenti presenti nel database:
@@ -20,7 +21,8 @@ Returns:
 '''
 def user_list():
     dict_mail_pass = {}
-    db = sqlite3.connect('DATABASE/user.db')
+    db_dir = Path('DATABASE')
+    db = sqlite3.connect(db_dir/'user.db')
     cursor = db.cursor()
     cursor.execute("SELECT Mail, Password, User_Type, Name_Surname  FROM USER")
     rows = cursor.fetchall()
@@ -47,8 +49,8 @@ Return:
 def add_user(Mail, Username, User_type, Password):
     sql_insert = '''INSERT INTO USER(Mail, Name_Surname, User_Type, Password) 
                     VALUES (?, ?, ?, ?)'''
-    
-    db = sqlite3.connect('DATABASE/user.db')
+    db_dir = Path('DATABASE')
+    db = sqlite3.connect(db_dir/'user.db')
     cursor = db.cursor()
     
     try:
@@ -76,8 +78,8 @@ Returns:
 def change_password(Mail, Password):
 
     sql_update = '''UPDATE USER SET Password = ? WHERE Mail = ?'''
-
-    db = sqlite3.connect('DATABASE/user.db')
+    db_dir = Path('DATABASE')
+    db = sqlite3.connect(db_dir/'user.db')
     cursor = db.cursor()
 
     try: 
