@@ -567,6 +567,11 @@ def model_list_by_maker(data, make):
 
 '''
 Funzione che mi genera un grafico con l'autonomia massima e minima per ogni produttore
+PARAM
+    dataset: dataset delle auto
+RETURN
+    chart: grafico a barre in cui si vede per alcuni marchi il range massimo e il minimo venduto
+    dataset: dataset in cui si vede per ogni produttore range massimo e minimo
 '''
 def electric_range(data):
     data_range_prod = (
@@ -661,6 +666,103 @@ def electric_range(data):
     return (bar + text_min + text_max).properties(
         title = alt.Title(text = 'Electric Range')
     ), tot_electric_range
+
+'''
+Funzione che ritorna un grafico che mostra la distribuzione di auto vendute in base alla tipologia 
+del motore e l'autonomia del motore elettrico.
+
+PARAM
+    dataset: dataset delle auto
+
+RETURN
+    chart: grafico in cui si mostra la distribuzione per colore delle auto vendute in base all'autonomia
+'''
+
+def engine_distribution(data):
+
+    #Organizziamo il dataset per ottenere un dataset utile per creare il grafico
+    data = (
+        data
+        .select('Electric Vehicle Type', 'Electric Range')
+        .filter(pl.col('Electric Range') > 0)
+    )
+
+    data = (
+        data
+        .group_by('Electric Vehicle Type', 'Electric Range')
+        .agg(
+            Count = pl.col('Electric Range').count()
+        )
+        .sort(pl.col('Electric Range'))
+    )
+
+    data = data.with_columns(
+        pl.col('Electric Vehicle Type').replace({
+            'Plug-in Hybrid Electric Vehicle (PHEV)': 'PHEV',
+            'Battery Electric Vehicle (BEV)': 'BEV'
+        })
+    )
+
+    base = (
+        alt.Chart(data)
+        .mark_bar(cornerRadiusTopLeft=3, cornerRadiusTopRight=3)
+        .encode(
+            x = ('Electric Range:Q'),
+            y = alt.Y('Count:Q'),
+            color= alt.Color('Electric Vehicle Type:N', scale=alt.Scale(scheme='oranges'))
+        )
+        .properties(width=800)  
+        
+    )
+
+    return base
+
+
+'''
+Funzione che mi crea le etichette per aggiungere informazioni
+'''
+
+def range_label(data):
+    data_label = (
+    data
+    .select('Electric Vehicle Type', 'Electric Range')
+    .filter(pl.col('Electric Range') > 0)
+    )
+
+    data_label = data_label.with_columns(
+        pl.col('Electric Vehicle Type').replace({
+            'Plug-in Hybrid Electric Vehicle (PHEV)': 'PHEV',
+            'Battery Electric Vehicle (BEV)': 'BEV'
+        })
+    )
+
+    #numero record con cui si esegue l'analisi
+    car_count = data_label.height
+
+    #media dell'autonomia delle auto
+    data_mean = (
+        data_label
+        .mean()
+        .select('Electric Range').item()
+    )
+    
+    #calcoliamo il numero di auto e la media in base al motore
+    data_mean_by_engine = (
+        data_label
+        .group_by('Electric Vehicle Type')
+        .agg(
+            Count = pl.col('Electric Range').count(),
+            Mean = pl.col('Electric Range').mean()
+        )
+        .with_columns(
+            pl.col('Mean').round(2).alias('Mean')  
+        )
+    )
+
+    return (car_count, round(data_mean,2),
+            data_mean_by_engine.row(0)[1],data_mean_by_engine.row(0)[2],
+            data_mean_by_engine.row(1)[1],data_mean_by_engine.row(1)[2])
+
 
 '''
 Funzione che va a generare la pagina di dashboard
@@ -762,14 +864,46 @@ def dashboard_main():
 
     st.divider()
 
-    st.subheader('Analisi tecnica delle auto')
+    st.title('Analisi tecnica delle auto')
 
+    
+    #OTTAVO CONTAINER
     c8 = st.container()
+
+    c8.subheader('Distribuzioni autonomia delle auto')
+
+    col1c8, col2c8 = c8.columns(spec=[.6,.4])
+
+    col1c8.altair_chart(engine_distribution(data), use_container_width=True)
+    st.session_state.range_label = range_label(data)
+    '''col2c8.metric(label = '**Numero totale EV**', value = st.session_state.range_label[2])
+    col2c8.metric(label = '**Media autonomia EV**', value = st.session_state.range_label[3])
+    col2c8.metric(label = '**Numero totale PHEV**', value = st.session_state.range_label[4])
+    col2c8.metric(label = '**Media autonomia PHEV**', value = st.session_state.range_label[5])'''
+
+    a,b = col2c8.columns(2)
+    a.metric(label = '**Numero totale auto**', value = st.session_state.range_label[0])
+    b.metric(label = '**Media autonomia**', value = st.session_state.range_label[1])
+    a.divider()
+    b.divider()
+    a.metric(label = '**Numero totale EV**', value = st.session_state.range_label[2])
+    b.metric(label = '**Media autonomia EV**', value = st.session_state.range_label[3])
+    a.divider()
+    b.divider()
+    a.metric(label = '**Numero totale PHEV**', value = st.session_state.range_label[4])
+    b.metric(label = '**Media autonomia PHEV**', value = st.session_state.range_label[5])
+
+
+    st.divider()
+
+
+    #NONO CONTAINER
+    c9 = st.container()
     electric_range_result = electric_range(data)
-    col1c8, col2c8, col3c8 = c8.columns(3)
-    col3c8.altair_chart(electric_range_result[0])
-    col2c8.write(electric_range_result[1])
-    col1c8.subheader('Spiegazione')
+    col1c9, col2c9, col3c9 = c9.columns(3)
+    col3c9.altair_chart(electric_range_result[0])
+    col2c9.write(electric_range_result[1])
+    col1c9.subheader('Spiegazione')
     
 if __name__ == '__main__':
     dashboard_main()
