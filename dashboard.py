@@ -721,7 +721,6 @@ def engine_distribution(data):
 '''
 Funzione che mi crea le etichette per aggiungere informazioni
 '''
-
 def range_label(data):
     data_label = (
     data
@@ -763,9 +762,17 @@ def range_label(data):
             data_mean_by_engine.row(0)[1],data_mean_by_engine.row(0)[2],
             data_mean_by_engine.row(1)[1],data_mean_by_engine.row(1)[2])
 
+'''
+Funzione che mi genera un grafico di tipo jitter strip in base alla tipologia del motore
 
+PARAM: 
+    dataset: dataset dei dati 
+
+RETURN: 
+    chart: strip jitter plot diviso per tipoplogia del motore delle auto
+'''
 @st.cache_data
-def strip_plot(_data):
+def jitter_strip_plot(_data):
 
     data_strip_plot = (
         _data
@@ -784,7 +791,7 @@ def strip_plot(_data):
         x = 'Electric Range:Q',
         yOffset='jitter:Q',
         
-        color=alt.Color('Electric Vehicle Type:N', scale=alt.Scale(scheme='oranges')).legend(None)
+        color=alt.Color('Electric Vehicle Type:N', scale=alt.Scale(scheme='purpleorange')).legend(None)
     ).transform_calculate(
         jitter = "sqrt(-2*log(random()))*cos(2*PI*random())"
     ).properties(
@@ -794,6 +801,158 @@ def strip_plot(_data):
 
     return gaussian_jitter.resolve_scale(yOffset='independent')
 
+
+'''
+Grafico che mi genera un jitter strip plot per le auto che fanno parte della lista passata come parametro.
+Inoltre si vedono colori differenti in base alla tipologia del motore. 
+
+PARAM
+    dataset: dataset dei dati
+    list: lista delle auto che compongono il grafico
+
+RETURN
+    chart: grafico di tipo jitter strip plot: 
+            ASSE Y: produttore di auto
+            ASSE X: autonomia del motore elettrico
+            COLORE: tipologia del motore
+'''
+def make_jitter_strip_plot(data, make): 
+
+    jitter_plot = (
+        data
+        .select('Make', 'Electric Range', 'Electric Vehicle Type')
+        .filter(pl.col('Make').is_in(make))
+        .filter(pl.col('Electric Range') > 0)
+    )
+
+    gaussian_jitter = alt.Chart(jitter_plot).mark_circle(size = 8).encode(
+        y = 'Make:N',
+        x = 'Electric Range:Q',
+        yOffset='jitter:Q',
+        color=alt.Color('Electric Vehicle Type:N', scale=alt.Scale(scheme='purpleorange'))
+    ).transform_calculate(
+        jitter = "sqrt(-2*log(random()))*cos(2*PI*random())"
+    ).properties(
+        width = 700,
+        height= 500
+    )
+
+    return (gaussian_jitter).resolve_scale(yOffset='independent')
+    
+'''
+Funzione che mi genera la lista per scegliere i produttori in base a dei parametri 
+per creare gli jitter strip plot
+
+PARAM
+    dataset: dataset dei dati
+
+RETURN
+    list: lista dei produttori che rispettano determinati parametri
+'''
+def make_jitter_strip_list(data):
+
+    make_jitter_list = []
+
+    data_range_prod = (
+        data
+        .select('Make', 'Electric Range', 'Electric Vehicle Type')
+        .filter(pl.col('Electric Range') > 0 )
+    )
+
+    range_data = (
+        data_range_prod
+        .group_by('Make','Electric Range', )
+        .agg(
+            Count = pl.col('Electric Range').count()
+        )
+        .sort('Make')
+    )
+
+    make_data = (
+        data_range_prod
+        .group_by('Make')
+        .agg(
+            Count = pl.col('Make').count()/data_range_prod.height*100
+        )
+        .filter(pl.col('Count') > 0.5)
+    )
+
+    make_jitter_list = make_data['Make'].unique().sort().to_list()
+
+    filtered_data = (
+        range_data
+        .group_by("Make")
+        .agg([
+            pl.col("Electric Range").max().alias("Max Range"),
+            pl.col("Electric Range").min().alias("Min Range"),
+        ])
+        .filter((pl.col("Max Range") - pl.col("Min Range")) < 5)
+    )
+
+    filter_list = filtered_data['Make'].unique().sort().to_list()
+
+
+    return list(set(make_jitter_list) - set(filter_list))
+
+
+'''
+Funzione che mi genera un grafico a linee in cui si vede 
+l'andamento medio del prezzo delle auto diviso per tipologia del motore.
+
+PARAM
+    dataset: dataset dei dati
+
+RETURN
+    chart: grafico che mostra l'andamento della media dei prezzi negli anni
+'''
+def year_mean_price(data):
+
+    data_mean_price = (
+        data
+        .filter(pl.col('Base MSRP') > 0)
+        .group_by('Model Year')
+        .agg(
+            Mean = pl.col('Base MSRP').mean(),
+            Count = pl.col('Model Year').count()
+        )
+        .filter(pl.col('Count')>100)
+        .sort('Model Year')
+    )
+
+    return (
+        alt.Chart(data_mean_price).mark_line(point={'color': 'orange', 'size': 30}, color='orange').encode(
+            x='Model Year:O',
+            y='Mean:Q',
+        ).properties(
+            width = 500
+        )
+    )
+
+
+'''
+Funzione che mi crea uno scatter plot per vedere come cambia il prezzo delle auto in base
+all'autonomia e alla tipologia del motore
+'''
+def range_price_scatter_plot(data):
+
+    data_scatter_plot = (
+        data
+        .filter(pl.col('Base MSRP') > 0)
+        .select('Base MSRP', 'Electric Range', 'Electric Vehicle Type')
+        .filter(pl.col('Electric Range') > 0)
+        .filter(pl.col('Base MSRP') < 120000)
+    )
+
+    scatter_plot = alt.Chart(data_scatter_plot).mark_point().encode(
+                        x='Electric Range:Q',
+                        y='Base MSRP:Q',
+                        color=alt.Color('Electric Vehicle Type:N', scale=alt.Scale(scheme='purpleorange')),
+                        size= 'count()'
+                    ).properties(
+                        width=600
+                    )
+
+    return scatter_plot
 
 
 '''
@@ -908,22 +1067,18 @@ def dashboard_main():
 
     col1c8.altair_chart(engine_distribution(data), use_container_width=True)
     st.session_state.range_label = range_label(data)
-    '''col2c8.metric(label = '**Numero totale EV**', value = st.session_state.range_label[2])
-    col2c8.metric(label = '**Media autonomia EV**', value = st.session_state.range_label[3])
-    col2c8.metric(label = '**Numero totale PHEV**', value = st.session_state.range_label[4])
-    col2c8.metric(label = '**Media autonomia PHEV**', value = st.session_state.range_label[5])'''
 
     a,b = col2c8.columns(2)
     a.metric(label = '**Numero totale auto**', value = st.session_state.range_label[0])
     b.metric(label = '**Media autonomia**', value = st.session_state.range_label[1])
     a.divider()
     b.divider()
-    a.metric(label = '**Numero totale EV**', value = st.session_state.range_label[2])
-    b.metric(label = '**Media autonomia EV**', value = st.session_state.range_label[3])
+    a.metric(label = '**Numero totale EV**', value = st.session_state.range_label[4])
+    b.metric(label = '**Media autonomia EV**', value = st.session_state.range_label[5])
     a.divider()
     b.divider()
-    a.metric(label = '**Numero totale PHEV**', value = st.session_state.range_label[4])
-    b.metric(label = '**Media autonomia PHEV**', value = st.session_state.range_label[5])
+    a.metric(label = '**Numero totale PHEV**', value = st.session_state.range_label[2])
+    b.metric(label = '**Media autonomia PHEV**', value = st.session_state.range_label[3])
 
 
     st.divider()
@@ -942,7 +1097,7 @@ def dashboard_main():
     c10 = st.container()
 
     col1c10, col2c10 = c10.columns(spec=[0.8, 0.2])
-    col1c10.altair_chart(strip_plot(data))
+    col1c10.altair_chart(jitter_strip_plot(data))
     col2c10.subheader('Spiegazione')
 
     #UNDICESIMO CONTAINER
@@ -950,9 +1105,41 @@ def dashboard_main():
     
     c11 = st.container()
 
-    col1c11, col2c11 = c11.columns(spec=[0.2, 0.8])
+    col1c11, col2c11 = c11.columns(spec=[0.3, 0.7])
 
     col1c11.subheader('Spiegazione')
+    
+    st.session_state.jitter_make_list = make_jitter_strip_list(data)
+
+    st.session_state.jitter_make_selection = col2c11.multiselect('''E' possibile scegliere al massimo 3 modelli''', 
+                        st.session_state.jitter_make_list, 
+                        st.session_state.jitter_make_list[0])
+    
+    col2c11.altair_chart(make_jitter_strip_plot(data, 
+                                                st.session_state.jitter_make_selection))
+    
+    # Analisi sui prezzi delle auto
+    # Analisi rispetto all'anno
+    # Analisi rispetto al motore
+    # Analisi rispetto ai marchi
+    st.divider()
+
+    st.header('Analisi sui prezzi')
+
+    #DODICESIMO CONTAINER
+    c12 = st.container()
+
+    col1c12, col2c12 = c12.columns(spec=[0.7, 0.3])
+
+    col1c12.altair_chart(year_mean_price(data))
+
+    #TREDICESIMO CONTAINER
+
+    c13 = st.container()
+
+    col1c13, col2c13 = c13.columns(spec=[.3, .7])
+
+    col2c13.altair_chart(range_price_scatter_plot(data))
 
 if __name__ == '__main__':
     dashboard_main()
