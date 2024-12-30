@@ -1,3 +1,9 @@
+'''
+CERCO DI OTTIMIZZARE IL FILE DELLA DASHBOARD.
+'''
+
+
+
 import streamlit as st
 import polars as pl
 import altair as alt
@@ -6,31 +12,33 @@ import pydeck as pdk
 import pandas as pd
 from pathlib import Path
 
-'''
-Funzione che legge i dati del file csv del percorso: DATA/data.csv
 
-Return:
-    dataframe: dataframe dei dati
-'''
 @st.cache_data
 def read_data():
+    '''
+    Funzione che legge i dati del file csv del percorso: DATA/data.csv
+
+    Returns:
+        dataframe: dataframe dei dati
+    '''
     data_dir = Path('DATA')
     data = pl.read_csv( data_dir/'data.csv')
     return data
 
-'''
-Funzione che ritorna un diagramma a barre in cui l'asse delle X rappresenta gli anni, mentre
-l'asse delle Y rappresenta il numero di auto vendute. 
 
--Crea un dataframe in cui sono presenti le colonne 'ANNO' e 'NUMERO VENDITE'
--Creazione del grafico a barre con i dati ricavati in precedenza
-
-Param: 
-    dataframe: dataframe dei dati
-Return:
-    chart: grafico a barre creato con altair
-'''
 def year_pop_chart(data):
+    '''
+    Funzione che ritorna un diagramma a barre in cui l'asse delle X rappresenta gli anni, mentre
+    l'asse delle Y rappresenta il numero di auto vendute. 
+
+    -Crea un dataframe in cui sono presenti le colonne 'ANNO' e 'NUMERO VENDITE'
+    -Creazione del grafico a barre con i dati ricavati in precedenza
+
+    Param: 
+        dataframe: dataframe dei dati
+    Return:
+        chart: grafico a barre creato con altair
+    '''
     data_chart = (
         data
         .group_by('Model Year')
@@ -55,15 +63,16 @@ def year_pop_chart(data):
     )
     return(chart)
 
-'''
-Testo che spiega il grafico che sarà presente alla sinistra della spiegazione
 
-Param:
-    int: numero di auto presenti nel database
-Return:
-    text: testo della spiegazione
-'''
 def text_year_pop_chart(number):
+    '''
+    Testo che spiega il grafico che sarà presente alla sinistra della spiegazione
+
+    Param:
+        int: numero di auto presenti nel database
+    Return:
+        text: testo della spiegazione
+    '''
     text = f'''Dal grafico si nota come il trend sia in costante crescita
             , presentando un periodo di inversione di trend causata dalla pandemia di
             Covid19.  
@@ -79,16 +88,17 @@ def text_year_pop_chart(number):
     return(text)
 
 
-'''
-Funzione che dal dataframe generato dal file csv, si vanno a selezionare i dati 
-del numero dei veicoli venduti per ogni produttore di auto presente nel dataset
 
-Param: 
-    dataframe: dataframe dei dati
-Return:
-    dataframe: dataframe che contiene PRODUTTORE e NUMERO DI VENDITE
-'''
 def make_pop_data(data):
+    '''
+    Funzione che dal dataframe generato dal file csv, si vanno a selezionare i dati 
+    del numero dei veicoli venduti per ogni produttore di auto presente nel dataset
+
+    Param: 
+        dataframe: dataframe dei dati
+    Return:
+        dataframe: dataframe che contiene PRODUTTORE e NUMERO DI VENDITE
+    '''
     data = (
         data
         .group_by('Make')
@@ -99,13 +109,14 @@ def make_pop_data(data):
     )
     return(data)
 
-'''
-Testo che spiega il grafico che sarà presente alla destra della spiegazione
 
-Return:
-    text: testo della spiegazione
-'''
 def text_make_pop_data(data):
+    '''
+    Testo che spiega il grafico che sarà presente alla destra della spiegazione
+
+    Return:
+        text: testo della spiegazione
+    '''
     data_mod = (
         data
         .group_by('Make')
@@ -131,32 +142,33 @@ def text_make_pop_data(data):
     return(text)
 
 
-'''
-Funzione che serve a creare una lista in cui sono presenti tutti i produttori di veicoli
-elettrici e ibridi presenti nel dataframe
 
-Param: 
-    dataframe: dataframe dei dati 
-Return:
-    list: lista dei produttori
-'''
 def make_list(data):
+    '''
+    Funzione che serve a creare una lista in cui sono presenti tutti i produttori di veicoli
+    elettrici e ibridi presenti nel dataframe
+
+    Param: 
+        dataframe: dataframe dei dati 
+    Return:
+        list: lista dei produttori
+    '''
     return data['Make'].unique().sort().to_list()
 
-'''
-Funzione che ha l'obiettivo di creare un grafico a linee 
-in cui in base ai produttore scelti dall'utente si vedranno il numero di auto 
-vendute da ogni produttore selezionato per ogni anno. 
 
-Param: 
-    dataframe: dataframe dei dati
-    list: lista dei produttori selezionati
-
-Return:
-    chart: grafico a linee
-'''
 def make_per_year (data, make):
+    '''
+    Funzione che ha l'obiettivo di creare un grafico a linee 
+    in cui in base ai produttore scelti dall'utente si vedranno il numero di auto 
+    vendute da ogni produttore selezionato per ogni anno. 
 
+    Param: 
+        dataframe: dataframe dei dati
+        list: lista dei produttori selezionati
+
+    Return:
+        chart: grafico a linee
+    '''
     data = (
         data
         .group_by('Make', 'Model Year')
@@ -193,17 +205,18 @@ def make_per_year (data, make):
     return line + text + circle
 
 
-'''
-Funzione che va a generare grafici a torta per ogni produttore scelto dall'utente.
-Per ogni produttore saranno visibili il numero di modelli venduti. 
-Il numero massimo di grafici visibili sarà 3. 
-La creazione dei grafici viene a seguito di una manipolazione dei dati.
 
-Param:
-    dataframe: dataframe dei dati 
-    list: lista di produttore selezionati dall'utente
-'''
 def model_per_make(data, make):
+    '''
+    Funzione che va a generare grafici a torta per ogni produttore scelto dall'utente.
+    Per ogni produttore saranno visibili il numero di modelli venduti. 
+    Il numero massimo di grafici visibili sarà 3. 
+    La creazione dei grafici viene a seguito di una manipolazione dei dati.
+
+    Param:
+        dataframe: dataframe dei dati 
+        list: lista di produttore selezionati dall'utente
+    '''
 
     '''
     Seleziono i dati che sono essenziali per creare il grafico
@@ -297,16 +310,17 @@ def model_per_make(data, make):
 
     return(chart)
 
-'''
-Funzione che crea una mappa con visualizzazione 3D in cui si vede
-dove sono state immatricatolate le auto nello stato di Washington 
-andando a creare una specie di scatterplot in cui le barre più elevate
-indicano una zona in cui l'immatricolazione delle auto è maggiore. 
-
-Param: 
-    dataframe: dataframe dei dati 
-'''
 def map_3d(data):
+    '''
+    Funzione che crea una mappa con visualizzazione 3D in cui si vede
+    dove sono state immatricatolate le auto nello stato di Washington 
+    andando a creare una specie di scatterplot in cui le barre più elevate
+    indicano una zona in cui l'immatricolazione delle auto è maggiore. 
+
+    Param: 
+        dataframe: dataframe dei dati 
+    '''
+    # Ottimizzazione 1: Selezione dati più efficiente
     coord_list = []
 
     #selezione dei dati da usare
@@ -357,19 +371,19 @@ def map_3d(data):
         )
     )
 
-'''
-Funzione che crea grafici a torta in cui si vede come sono distribuite le auto immatricolate
-per marca rispetto alla tipologia di motore. 
 
-Param: 
-    dataset: dataset dei dati
-    list: lista delle marche che si desidera analizzare
-
-Return: 
-    chart: grafici che rappresentano la distribuzione dei motori
-'''
 def engine_type_per_make (data, make):
+    '''
+    Funzione che crea grafici a torta in cui si vede come sono distribuite le auto immatricolate
+    per marca rispetto alla tipologia di motore. 
 
+    Param: 
+        dataset: dataset dei dati
+        list: lista delle marche che si desidera analizzare
+
+    Return: 
+        chart: grafici che rappresentano la distribuzione dei motori
+    '''
     data_type_engine = (
         data
         .group_by('Make', 'Electric Vehicle Type')
@@ -444,18 +458,18 @@ def engine_type_per_make (data, make):
     return chart
 
 
-'''
-Funzione che mi crea una lista dei produttore che hanno venduto almeno il 0.25% delle auto presenti
-nel dataset. 
 
-Param
-    dataset: dataset dei dati
-
-Return
-    list: lista contenente i produttori di auto con almneo 0.25% di vendite
-'''
 def maker_list_over_25(data):
+    '''
+    Funzione che mi crea una lista dei produttore che hanno venduto almeno il 0.25% delle auto presenti
+    nel dataset. 
 
+    Param
+        dataset: dataset dei dati
+
+    Return
+        list: lista contenente i produttori di auto con almneo 0.25% di vendite
+    '''
     data = (
         data
         .group_by('Make')
@@ -468,10 +482,24 @@ def maker_list_over_25(data):
     return data['Make'].unique().sort().to_list()
 
 
-'''
-Funzione che mi crea un piccolo report sul produttore che viene selezionato
-'''
+
 def maker_small_report(data, maker, model_list): 
+
+    '''
+    Funzione che mi crea un piccolo report sul produttore che viene selezionato
+
+    PARAM
+        dataset: dataset dei dati
+        string: produttore selezionato
+        list: lista dei modelli per creare il grafico a linee
+
+    RETURN
+        list:
+            [0] integer: primo anno di vendita auto elettrico o ibrida
+            [1] integer: conteggio auto vendute
+            [2] integer: numero di modelli venduti
+            [3] chart: grafico a linee che mostra quante auto sono state vendute per modello selezionato
+    '''
 
     # Primo anno in cui il produttore ha venduto un auto nello stato di Washington
     first_year = (
@@ -537,20 +565,21 @@ def maker_small_report(data, maker, model_list):
     return first_year, sell_car_count, total_model_make, compl_chart
 
 
-'''
-Funzione che in base al produttore che viene passato come parametro
-ritorna una lista contenente i modelli delle auto ordinati in base al numero 
-di auto vendute per quel modello
 
-Param: 
-    dataframe: dataframe dei dati
-    string: nome del produttore
-
-Return: 
-    list: lista contenente i modelli del produttore
-'''
 def model_list_by_maker(data, make):
 
+    '''
+    Funzione che in base al produttore che viene passato come parametro
+    ritorna una lista contenente i modelli delle auto ordinati in base al numero 
+    di auto vendute per quel modello
+
+    Param: 
+        dataframe: dataframe dei dati
+        string: nome del produttore
+
+    Return: 
+        list: lista contenente i modelli del produttore
+    '''
     data = (
         data
         .filter(pl.col('Make') == make)
@@ -565,15 +594,15 @@ def model_list_by_maker(data, make):
     return data['Model'].to_list()
 
 
-'''
-Funzione che mi genera un grafico con l'autonomia massima e minima per ogni produttore
-PARAM
-    dataset: dataset delle auto
-RETURN
-    chart: grafico a barre in cui si vede per alcuni marchi il range massimo e il minimo venduto
-    dataset: dataset in cui si vede per ogni produttore range massimo e minimo
-'''
 def electric_range(data):
+    '''
+    Funzione che mi genera un grafico con l'autonomia massima e minima per ogni produttore
+    PARAM
+        dataset: dataset delle auto
+    RETURN
+        chart: grafico a barre in cui si vede per alcuni marchi il range massimo e il minimo venduto
+        dataset: dataset in cui si vede per ogni produttore range massimo e minimo
+    '''
     data_range_prod = (
         data
         .select('Make', 'Electric Range', 'Electric Vehicle Type')
@@ -667,18 +696,20 @@ def electric_range(data):
         title = alt.Title(text = 'Electric Range')
     ), tot_electric_range
 
-'''
-Funzione che ritorna un grafico che mostra la distribuzione di auto vendute in base alla tipologia 
-del motore e l'autonomia del motore elettrico.
 
-PARAM
-    dataset: dataset delle auto
-
-RETURN
-    chart: grafico in cui si mostra la distribuzione per colore delle auto vendute in base all'autonomia
-'''
 
 def engine_distribution(data):
+
+    '''
+    Funzione che ritorna un grafico che mostra la distribuzione di auto vendute in base alla tipologia 
+    del motore e l'autonomia del motore elettrico.
+
+    PARAM
+        dataset: dataset delle auto
+
+    RETURN
+        chart: grafico in cui si mostra la distribuzione per colore delle auto vendute in base all'autonomia
+    '''
 
     #Organizziamo il dataset per ottenere un dataset utile per creare il grafico
     data = (
@@ -718,14 +749,23 @@ def engine_distribution(data):
     return base
 
 
-'''
-Funzione che mi crea le etichette per aggiungere informazioni
-'''
 def range_label(data):
+
+    '''
+    Funzione che mi crea le etichette per aggiungere informazioni su numero auto vendute e autonomia
+
+    PARAM
+        dataset: dataset dei dati
+
+    RETURN
+        list: lista contenente le informazioni utili per le auto
+    '''
+
+    #organizzazione dei dati
     data_label = (
-    data
-    .select('Electric Vehicle Type', 'Electric Range')
-    .filter(pl.col('Electric Range') > 0)
+        data
+        .select('Electric Vehicle Type', 'Electric Range')
+        .filter(pl.col('Electric Range') > 0)
     )
 
     data_label = data_label.with_columns(
@@ -736,6 +776,7 @@ def range_label(data):
     )
 
     #numero record con cui si esegue l'analisi
+    # numero di auto 
     car_count = data_label.height
 
     #media dell'autonomia delle auto
@@ -762,22 +803,28 @@ def range_label(data):
             data_mean_by_engine.row(0)[1],data_mean_by_engine.row(0)[2],
             data_mean_by_engine.row(1)[1],data_mean_by_engine.row(1)[2])
 
-'''
-Funzione che mi genera un grafico di tipo jitter strip in base alla tipologia del motore
 
-PARAM: 
-    dataset: dataset dei dati 
-
-RETURN: 
-    chart: strip jitter plot diviso per tipoplogia del motore delle auto
-'''
 @st.cache_data
 def jitter_strip_plot(_data):
 
+    '''
+    Funzione che mi genera un grafico di tipo jitter strip in base alla tipologia del motore
+
+    PARAM: 
+        dataset: dataset dei dati 
+
+    RETURN: 
+        chart: 
+            ASSE Y: tipologia del motore
+            ASSE X: autonomia del motore elettrico
+'''
+
+    #organizzaione dei dati
     data_strip_plot = (
         _data
         .select('Make', 'Electric Range', 'Electric Vehicle Type')
         .filter(pl.col('Electric Range') > 0 )
+        .limit(10000)  
     )
     data_strip_plot = data_strip_plot.with_columns(
         pl.col('Electric Vehicle Type').replace({
@@ -786,6 +833,7 @@ def jitter_strip_plot(_data):
         })
     )
 
+    #creazione del graifco 
     gaussian_jitter = alt.Chart(data_strip_plot).mark_circle(size = 8).encode(
         y = 'Electric Vehicle Type:N',
         x = 'Electric Range:Q',
@@ -802,34 +850,54 @@ def jitter_strip_plot(_data):
     return gaussian_jitter.resolve_scale(yOffset='independent')
 
 
-'''
-Grafico che mi genera un jitter strip plot per le auto che fanno parte della lista passata come parametro.
-Inoltre si vedono colori differenti in base alla tipologia del motore. 
+@st.cache_data
+def make_jitter_strip_plot(_data, make): 
 
-PARAM
-    dataset: dataset dei dati
-    list: lista delle auto che compongono il grafico
+    '''
+    Grafico che mi genera un jitter strip plot per le auto che fanno parte della lista passata come parametro.
+    Inoltre si vedono colori differenti in base alla tipologia del motore. 
 
-RETURN
-    chart: grafico di tipo jitter strip plot: 
-            ASSE Y: produttore di auto
-            ASSE X: autonomia del motore elettrico
-            COLORE: tipologia del motore
-'''
-def make_jitter_strip_plot(data, make): 
+    PARAM
+        dataset: dataset dei dati
+        list: lista delle auto che compongono il grafico
 
-    jitter_plot = (
-        data
-        .select('Make', 'Electric Range', 'Electric Vehicle Type')
-        .filter(pl.col('Make').is_in(make))
-        .filter(pl.col('Electric Range') > 0)
-    )
+    RETURN
+        chart: grafico di tipo jitter strip plot: 
+                ASSE Y: produttore di auto
+                ASSE X: autonomia del motore elettrico
+                COLORE: tipologia del motore
+    '''
+
+    df_list = []
+
+    for i in make:
+        df_list.append(
+            _data
+            .select('Make', 'Electric Range', 'Electric Vehicle Type')
+            .filter(pl.col('Make') == i)
+            .filter(pl.col('Electric Range') > 0)
+            .limit(1000)
+        )
+
+    
+    if len(df_list) > 0:
+        jitter_plot = pl.concat(df_list)
+    else:
+        jitter_plot = pl.DataFrame(schema={"Make": pl.Utf8, "Electric Range": pl.Int32, "Electric Vehicle Type": pl.Utf8})
+
+    
 
     gaussian_jitter = alt.Chart(jitter_plot).mark_circle(size = 8).encode(
         y = 'Make:N',
         x = 'Electric Range:Q',
         yOffset='jitter:Q',
-        color=alt.Color('Electric Vehicle Type:N', scale=alt.Scale(scheme='purpleorange'))
+        color=alt.Color(
+            'Electric Vehicle Type:N',
+            scale=alt.Scale(
+                domain=['BEV', 'PHEV'],  # Categorie fisse
+                range=['#9F9DB6', '#CBA575']  # Colori predefiniti per BEV e PHEV
+        )
+    )
     ).transform_calculate(
         jitter = "sqrt(-2*log(random()))*cos(2*PI*random())"
     ).properties(
@@ -839,18 +907,18 @@ def make_jitter_strip_plot(data, make):
 
     return (gaussian_jitter).resolve_scale(yOffset='independent')
     
-'''
-Funzione che mi genera la lista per scegliere i produttori in base a dei parametri 
-per creare gli jitter strip plot
 
-PARAM
-    dataset: dataset dei dati
-
-RETURN
-    list: lista dei produttori che rispettano determinati parametri
-'''
 def make_jitter_strip_list(data):
+    '''
+    Funzione che mi genera la lista per scegliere i produttori in base a dei parametri 
+    per creare gli jitter strip plot
 
+    PARAM
+        dataset: dataset dei dati
+
+    RETURN
+        list: lista dei produttori che rispettano determinati parametri
+    '''
     make_jitter_list = []
 
     data_range_prod = (
@@ -895,18 +963,18 @@ def make_jitter_strip_list(data):
     return list(set(make_jitter_list) - set(filter_list))
 
 
-'''
-Funzione che mi genera un grafico a linee in cui si vede 
-l'andamento medio del prezzo delle auto diviso per tipologia del motore.
 
-PARAM
-    dataset: dataset dei dati
-
-RETURN
-    chart: grafico che mostra l'andamento della media dei prezzi negli anni
-'''
 def year_mean_price(data):
+    '''
+    Funzione che mi genera un grafico a linee in cui si vede 
+    l'andamento medio del prezzo delle auto diviso per tipologia del motore.
 
+    PARAM
+        dataset: dataset dei dati
+
+    RETURN
+        chart: grafico che mostra l'andamento della media dei prezzi negli anni
+    '''
     data_mean_price = (
         data
         .filter(pl.col('Base MSRP') > 0)
@@ -929,19 +997,19 @@ def year_mean_price(data):
     )
 
 
-'''
-Funzione che mi crea uno scatter plot per vedere come cambia il prezzo delle auto in base
-all'autonomia e alla tipologia del motore
 
-PARAM
-    dataset: dataset dei dati
-
-RETURN
-    chart: scatterplot in cui si vedono autonomia e range di elettrico, con la suddivisione
-           per la tipologia di motore
-'''
 def range_price_scatter_plot(data):
+    '''
+    Funzione che mi crea uno scatter plot per vedere come cambia il prezzo delle auto in base
+    all'autonomia e alla tipologia del motore
 
+    PARAM
+        dataset: dataset dei dati
+
+    RETURN
+        chart: scatterplot in cui si vedono autonomia e range di elettrico, con la suddivisione
+            per la tipologia di motore
+    '''
     data_scatter_plot = (
         data
         .filter(pl.col('Base MSRP') > 0)
