@@ -41,7 +41,7 @@ def year_pop_chart(data):
     '''
     data_chart = (
         data
-        .group_by('Model Year')
+        .group_by('Model Year', 'Electric Vehicle Type')
         .agg(
             vendite_annuali = pl.col('Model Year').count()
         )
@@ -53,12 +53,11 @@ def year_pop_chart(data):
             data_chart,
             title = alt.Title('Vendita annuale di auto elettrico o ibride')
         )
-        .mark_bar(
-            color='#f17105'
-        ) 
+        .mark_bar() 
         .encode(
             y='vendite_annuali:Q',
-            x= 'Model Year:O'
+            x= 'Model Year:O',
+            color=alt.Color('Electric Vehicle Type:N', scale=alt.Scale(scheme='oranges'))
         )
     )
     return(chart)
