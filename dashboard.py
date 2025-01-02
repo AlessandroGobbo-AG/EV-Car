@@ -494,40 +494,50 @@ def maker_small_report(data, maker, model_list):
             [3] chart: grafico a linee che mostra quante auto sono state vendute per modello selezionato
     '''
 
+    data_maker = data.filter(pl.col('Make') == maker)
     # Primo anno in cui il produttore ha venduto un auto nello stato di Washington
     first_year = (
-        data
-        .filter(pl.col('Make') == maker)
+        data_maker
         .select(pl.col('Model Year')).min().item()
     )
 
     # Numero di auto vendute dal produttore nello stato di Washington
     sell_car_count = (
-        data
-        .filter(pl.col('Make')== maker)
+        data_maker
         .select(pl.col('Make')).count().item()  
     )
 
     # Numero di modelli venduti dal produttore nello stato di Washington
     total_model_make = (
-        data
-        .filter(pl.col('Make') == maker)
+        data_maker
         .select(pl.col('Model')).unique().count().item()
     )
 
-    data = (
-        data
+    # Percentuale di auto elettriche e ibride
+    percentage_engine = (
+        data_maker
+        .group_by('Electric Vehicle Type')
+        .agg(
+            ((pl.col('Electric Vehicle Type').count())/data_maker.height).round(2).alias('Engine Type Percentage')
+        )
+        .sort(pl.col('Electric Vehicle Type'))
+    )
+
+    # Percentuale 2024 vs 2023
+
+
+    data_chart = (
+        data_maker
         .group_by('Make', 'Model', 'Model Year')
         .agg(
             Total = pl.col('Model').count()
         )
-        .filter(pl.col('Make')==maker)
         .filter(pl.col('Model').is_in(model_list))
-        .filter(pl.col('Total')>15)
+        .filter(pl.col('Total')>30)
         .sort(pl.col('Model Year'))
     )
 
-    chart = alt.Chart(data).encode( 
+    chart = alt.Chart(data_chart).encode( 
         color= alt.Color(
                 'Model:N',
                 scale=alt.Scale(scheme='oranges')
@@ -555,7 +565,7 @@ def maker_small_report(data, maker, model_list):
 
     #return line + text + circle
 
-    return first_year, sell_car_count, total_model_make, compl_chart
+    return first_year, sell_car_count, total_model_make, compl_chart, percentage_engine
 
 
 
@@ -635,7 +645,7 @@ def electric_range(data):
             pl.col("Electric Range").max().alias("Max Range"),
             pl.col("Electric Range").min().alias("Min Range"),
         ])
-        #.filter((pl.col("max_Electric_Range") - pl.col("min_Electric_Range")) < 5)
+        
     )
 
     tot_electric_range = filtered_data
@@ -862,8 +872,12 @@ def make_jitter_strip_plot(_data, make):
                 COLORE: tipologia del motore
     '''
 
+    # Crea lista vuota per dataframe filtrati
     df_list = []
 
+    # Per ogni marca richiesta:
+    # - Filtra per marca specifica
+    # - Limita a 1000 record, per motivi di complessità computazionale
     for i in make:
         df_list.append(
             _data
@@ -873,14 +887,14 @@ def make_jitter_strip_plot(_data, make):
             .limit(1000)
         )
 
-    
+    # Concatena risultati o crea DataFrame vuoto se nessun dato
     if len(df_list) > 0:
         jitter_plot = pl.concat(df_list)
     else:
         jitter_plot = pl.DataFrame(schema={"Make": pl.Utf8, "Electric Range": pl.Int32, "Electric Vehicle Type": pl.Utf8})
 
     
-
+    # Creo grafico con Altair
     gaussian_jitter = alt.Chart(jitter_plot).mark_circle(size = 8).encode(
         y = 'Make:N',
         x = 'Electric Range:Q',
@@ -1023,6 +1037,19 @@ def range_price_scatter_plot(data):
 
     return scatter_plot
 
+'''
+Funzione che ritorna il testo che spiega la funzionalità della mappa 3d
+
+RETURN
+    string: testo esplicativo
+'''
+def map_3d_text():
+    text = f'''Di seguito sarà presente una mappa 3d interattiva, che ha l'obiettivo di mostrare come sono 
+                distribuiti i dati all'interno dello stato di :orange[**Washington**].  
+                Delle barre più alte, o colori che tendono al rosso, indicano una maggior concentrazione di dati
+                in quella zona dello stato.'''
+    
+    return text
 
 '''
 Funzione che va a generare la pagina di dashboard
@@ -1034,7 +1061,14 @@ def dashboard_main():
     st.title(':orange[DASHBOARD]')
     st.divider()
     
+    #----------------------------------------------------------------------------------------------------
     #PRIMO CONTAINER
+
+    '''
+    Container in cui verranno presentate le vendite annuali di auto suddivise per tipologia di motore.
+    Inoltre sono presenti informazioni sui dati utilizzati per creare il report
+    '''
+
     st.title('Vendita auto BEV/PHEV')
     c1 = st.container(border=False)
 
@@ -1042,27 +1076,47 @@ def dashboard_main():
 
     col1c1.altair_chart(year_pop_chart(data), use_container_width=True)
     col2c1.markdown(text_year_pop_chart(data.height))
-
+  
+    #----------------------------------------------------------------------------------------------------
     #SECONDO CONTAINER
+
+    '''
+    Container in cui verranno presentate le vendite totali eseguite da ogni produttore presente nel dataset.
+    Inoltre verranno presentate delle considerazioni sui dati presenti
+    '''
+
     c2 = st.container(border=False)
     c2.subheader('Totale Vendite')
 
     col1c2, mid,col2c2 = c2.columns([3,1,2])
     #col2c2.dataframe(make_pop_data(data))
     
-    col2c2.dataframe(make_pop_data(data))
+    col2c2.dataframe(make_pop_data(data), height=300)
     
     col1c2.markdown(text_make_pop_data(data))
     
-    
-    #TERZO CONTAINE
+    #----------------------------------------------------------------------------------------------------
+    #TERZO CONTAINER
+
+    '''
+    Container in cui sarà presente una mappa 3d interattiva in cui si vede la distribuzione delle vendite 
+    di auto sulla mappa dello stato di Washington.
+    '''
+
     c3 = st.container(border=False)
     c3.title('Distribuzione vendite stato Washington')
+    c3.markdown(map_3d_text())
     c3.pydeck_chart(map_3d(data))
 
     st.divider()
     
+    #----------------------------------------------------------------------------------------------------
     #QUARTO CONTAINER
+    
+    '''
+    Container in cui è presente una grafico a linee che indica il numero di vendite annuali di al massimo
+    3 produttori selezionati a tramite una multiselect
+    '''
 
     c4 = st.container(border=False)
     c4.title('Analisi vendita per produttore')
@@ -1073,17 +1127,50 @@ def dashboard_main():
     
     c4.altair_chart(make_per_year(data, st.session_state.make_selection))
 
+    #----------------------------------------------------------------------------------------------------
     #QUINTO CONTAINER
+
+    '''
+    Container in cui sono presenti da 1 a 3 grafici a torta, dipende dal numero di produttori selezionati
+    nel multiselect presente nel container 4. 
+    I grafici a torta indicano la proporzioni di modelli venduti per ogni produttore selezionato. 
+    Durante la fase di analisi si è scelto un range pari a 0%-1% tale per cui i modelli che appartengono
+    a questo intervallo verranno inseriti in una categoria definita 'ALTRO'.
+    '''
+
     c5 = st.container(border=False)
     c5.subheader('Analisi vendita per modello')
     c5.altair_chart(model_per_make(data, st.session_state.make_selection), use_container_width=True)
 
+    #----------------------------------------------------------------------------------------------------
     #SESTO CONTAINER
+
+    '''
+    Container in cui sono presenti da 1 a 3 grafici a torta, dipende dal numero di produttori selezionati
+    nel multiselect presente nel container 4. 
+    I grafici a torta indicano la proporzioni di tipologia di motore per ogni produttore selezionato. 
+    '''
+    
     c6 = st.container(border=False)
     c6.subheader('Analisi vendita per tipologia di motore')
     c6.altair_chart(engine_type_per_make(data, st.session_state.make_selection))
 
+    #----------------------------------------------------------------------------------------------------
     #SETTIMO CONTAINER
+
+    '''
+    Container in cui è stato creato un breve report su un produttore scelto tramite una selectbox. 
+    Per il produttore scelto si vedranno delle label: 
+    -Primo anno di vendita
+    -Totale auto vendute
+    -Percentuale auto BEV
+    -Percentuale auto PHEV
+    -Numero di modelli venduti
+
+    Inoltre è presente un grafico a linee in cui si vedono, di al massimo 2 modelli scelti tramite multiselect, 
+    le vendite annuali dei modelli scelti. 
+    '''
+    
     c7 = st.container(border = True)
     
     c7.subheader('Analisi per produttore')
@@ -1092,6 +1179,9 @@ def dashboard_main():
              all'originale, questo perchè per creare dei report più soddisfacenti è stata fatta una scelta,
              a seguito di un'analisi, di eliminare i produttore di auto che hanno venduto meno dello 0.25% delle
              auto presenti nel dataset.''')
+    
+    c7.write(''':orange[**Scegliere un produttore di auto per ottenere un breve report con delle informazioni sulla vendita
+             di auto**.]''')
 
     #è una stringa di al massimo un marchio
     st.session_state.prod_selection = c7.selectbox('''E' possibile scegliere al massimo UN marchio''',
@@ -1121,19 +1211,47 @@ def dashboard_main():
     
     col1c7.metric(label="**Primo anno di vendita**", value=st.session_state.report[0])
     col1c7.metric(label="**Totale auto vendute**", value=st.session_state.report[1])
-    col1c7.metric(label="**Numero di modelli venduti**", value = st.session_state.report[2])
 
+    if 'BEV' in st.session_state.report[4]['Electric Vehicle Type']:
+        phev_value = st.session_state.report[4].filter(pl.col('Electric Vehicle Type') == 'BEV')['Engine Type Percentage'][0]
+        col1c7.metric(label = "**Percentuale Auto BEV**", value = f"{phev_value*100:.0f}%")
+    if 'PHEV' in st.session_state.report[4]['Electric Vehicle Type']:
+        phev_value = st.session_state.report[4].filter(pl.col('Electric Vehicle Type') == 'PHEV')['Engine Type Percentage'][0]
+        col1c7.metric(label="**Percentuale Auto PHEV**", value=f"{phev_value*100:.0f}%")
+
+    col1c7.metric(label="**Numero di modelli venduti**", value = st.session_state.report[2])
     col2c7.altair_chart(st.session_state.report[3], use_container_width=True)
 
     st.divider()
 
     st.title('Analisi tecnica delle auto')
 
-    
+    #----------------------------------------------------------------------------------------------------
     #OTTAVO CONTAINER
+
+    '''
+    Container in cui è presente un grafico a barre con l'obiettivo di mostrare la distribuzione di auto
+    in base all'autonomia del motore elettrico, con suddivisione della tipologia di colore tramite i colori. 
+
+    Inoltre sono presenti delle label con delle informazioni aggiuntive sulle auto in base alla tipologia del motore
+    - Numero totale di auto
+    - Numero totale di auto BEV
+    - Numero totale di auto PHEV
+    - Media autonomia 
+    - Media autonomia auto BEV
+    - Media autonomia auto PHEV
+    '''
+    
     c8 = st.container()
 
     c8.subheader('Distribuzioni autonomia delle auto')
+
+    c8.write(f'''In questa parte della dashboard, si vuole effettuare un'analisi sull'autonomia delle auto presenti nel dataset.  
+             La prima cosa che si nota è che la dimensione del dataset è diminuita, questo perchè nel dataset origininale
+             non tutti i record hanno valorizzato il valore del campo dell'autonomia del motore elettrico in dotazione.  
+             In seguito, quando si farà riferimento al dataset in questa parte di analisi, il dataset preso in considerazione
+             sarà quello con i dati che dispongono del campo ***Electric Range***.  
+             Sulla destra si vede su quanti record è stata eseguita l'analisi.''')
 
     col1c8, col2c8 = c8.columns(spec=[.6,.4])
 
@@ -1155,16 +1273,43 @@ def dashboard_main():
 
     st.divider()
 
-
+    #----------------------------------------------------------------------------------------------------
     #NONO CONTAINER
+
+    '''
+    Container in cui si vuole mostrare, per produttore, l'autonomia massima e la minima presente nel dataset.
+    Questo avviene tramite un dataframe e un grafico. 
+    Nel grafico, per motivi di visualizzazione, vengono presentati i produttori con una differenza tra  range massimo
+    e range minimo 'siginificativo'.
+    '''
+
     c9 = st.container()
+    c9.subheader('Analisi su autonomia massima e minima')
+
     electric_range_result = electric_range(data)
     col1c9, col2c9, col3c9 = c9.columns(3)
     col3c9.altair_chart(electric_range_result[0])
     col2c9.write(electric_range_result[1])
-    col1c9.subheader('Spiegazione')
+    col1c9.write('''A destra si vedono i dati su autonomia massima e minima per i 
+                 produttore presenti nel dataset.''')
+    col1c9.write(''':orange[***Nota Bene***]  
+                 La scelta di mostrare sia il dataframe che il grafico è per motivi di visualizzazione. 
+                 Se fossero stati inseriti tutti i produttori all'interno del grafico, il risultato sarebbe
+                 stato un grafico molto lungo in cui molti produttori avrebbero avuto una **riga verticale
+                 molto fina**, perdendo l'**efficacia** del grafico.  
+                 Per questo motivpo è stato inserito il dataframe.''')
+    col1c9.write(''':orange[***Considerazione***]  
+                 Potrebbe essere interessante vedere come sono distribuite le vendite all'interno del range
+                 di autonomia dei vari produttori.''')
     
+    #----------------------------------------------------------------------------------------------------
     #DECIMO CONTAINER
+
+    '''
+    Container in cui sarà presente un jitter strip plot con l'obiettivo di vedere come sono distribuiti 
+    i dati rispetto ad autonomia in elettrico e tipologia di motore.
+    '''
+    
     st.divider()
     c10 = st.container()
 
@@ -1172,6 +1317,7 @@ def dashboard_main():
     col1c10.altair_chart(jitter_strip_plot(data))
     col2c10.subheader('Spiegazione')
 
+    #----------------------------------------------------------------------------------------------------
     #UNDICESIMO CONTAINER
     st.divider()
     
@@ -1190,14 +1336,11 @@ def dashboard_main():
     col2c11.altair_chart(make_jitter_strip_plot(data, 
                                                 st.session_state.jitter_make_selection))
     
-    # Analisi sui prezzi delle auto
-    # Analisi rispetto all'anno
-    # Analisi rispetto al motore
-    # Analisi rispetto ai marchi
     st.divider()
 
     st.header('Analisi sui prezzi')
 
+    #----------------------------------------------------------------------------------------------------
     #DODICESIMO CONTAINER
     c12 = st.container()
 
@@ -1205,6 +1348,7 @@ def dashboard_main():
 
     col1c12.altair_chart(year_mean_price(data))
 
+    #----------------------------------------------------------------------------------------------------
     #TREDICESIMO CONTAINER
 
     c13 = st.container()
