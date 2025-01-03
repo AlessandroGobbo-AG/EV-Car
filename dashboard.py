@@ -45,7 +45,7 @@ def year_pop_chart(data):
     chart = (
         alt.Chart(
             data_chart,
-            title = alt.Title('Vendita annuale di auto elettrico o ibride')
+            #title = alt.Title('Vendita annuale di auto elettrico o ibride')
         )
         .mark_bar() 
         .encode(
@@ -66,19 +66,21 @@ def text_year_pop_chart(number):
     Return:
         text: testo della spiegazione
     '''
-    text = f'''Dal grafico si nota come il trend sia in costante crescita
-            , presentando un periodo di inversione di trend causata dalla pandemia di
-            Covid19.  
-            :orange[***Considerazioni***]  
-            **1)** Il dataset non presenta tutte le auto BEV/PHEV immatricolato nello stato 
-            di Washington, i dati sono stati ricavati dal sito Data.gov, (si guardi documentazione).  
-            **2)** Il totale di auto vendute per questa analisi è:  
-            :orange-background[**{number}**]  
-            **3)** I dati sono stati scaricati in data 10-12-2024, e l'ultimo aggiornamento al dataset
-            è stato eseguito in data 22-11-2024
-            
-            '''
-    return(text)
+    return(f"""
+    <div style='border:2px solid orange; padding:20px; border-radius:5px; margin-bottom:30px; margin-right:30px; font-size:16px;'>
+        <span style="color: orange; font-weight: bold;">Informazioni</span><br>
+        <strong><span style="color: orange;">1)</span></strong> Il dataset presenta le auto BEV/PHEV presenti nel sito Data.gov (si guardi documentazione per il link).<br>
+        <strong><span style="color: orange;">2)</span></strong> Il totale di auto vendute per questa analisi è:
+        <span style="background-color: orange; color: black; font-weight: bold; padding: 5px; border-radius: 3px;">{number}</span><br>
+        <strong><span style="color: orange;">3)</span></strong> I dati sono stati scaricati in data 10-12-2024, e l'ultimo aggiornamento al dataset
+        è stato eseguito in data 22-11-2024 <br>
+        <strong><span style="color: orange;">4)</span></strong> L'obiettivo dell'analisi è quello di rappresentare e cercare di spiegare le informazioni presenti nel dataset. 
+        <br>I dati verranno presentati graficamente e saranno affiancati da etichette/label oppure da spiegazioni o riassunti sui grafici. <br>
+        <strong><span style="color: orange;">5)</span></strong> I dati sull'autonomia sono in Miglia, mentre i dati sul costo
+        a listino delle auto sono in dollari.
+    </div>
+    """)
+    
 
 
 
@@ -121,17 +123,23 @@ def text_make_pop_data(data):
     )
 
     data_list = data_mod.rows()[0:4]
-    text = f'''Nella tabella presente di lato si vede quante auto
-            sono state vendute da ogni venditore presente nello stato di washington 
-            dal 2011 al 2024, inoltre sono presenti i dati delle auto ordinate che 
-            verranno consegnate nel 2025.  
-            :orange[***Marchi più venduti***]  
-            •{
-                '\n•'.join( [ element[0] for element in data_list])
-            }
-            \n:orange[***Considerazioni***]  
-            Nelle prossime analisi si vedranno quali sono i modelli più venduti
-            e cercheremo di capire i motivi. '''
+    text = f"""
+    <div style='border:2px solid orange; padding:20px; border-radius:5px; margin-bottom:30px; font-size:16px;'>
+        Nella tabella di lato sono presenti i dati di vendita di ogni produttore presente nel dataset. <br>
+        I dati sono stati filtrati, mantenendo solo i dati dal 2011 al 2025.
+        <span style="color: orange; font-weight: bold;">Marchi più venduti</span>
+        <ul>
+            {"".join(f'''<span style= "font-weight: bold;"><li>{element[0]}</li></span>''' for element in data_list)}
+        </ul>
+        <span style="color: orange; font-weight: bold;">Considerazioni</span>
+        <ul>
+            <li>Sono presenti dati del 2025 a causa degli ordini che non riescono ad essere consegnati nel 2024.</li>
+            <li>Gli utenti che hanno permessi i permessi di <strong>Vendita</strong> avranno la possibilità di aggiungere</li>
+            <li>ulteriori dati al dataset così da tener aggiornata la dashboard nel tempo</li>
+        </ul>
+        
+    </div>
+    """
     return(text)
 
 
@@ -1044,10 +1052,14 @@ RETURN
     string: testo esplicativo
 '''
 def map_3d_text():
-    text = f'''Di seguito sarà presente una mappa 3d interattiva, che ha l'obiettivo di mostrare come sono 
-                distribuiti i dati all'interno dello stato di :orange[**Washington**].  
-                Delle barre più alte, o colori che tendono al rosso, indicano una maggior concentrazione di dati
-                in quella zona dello stato.'''
+    text = f'''
+    <div style='border:2px solid orange; padding:20px; border-radius:5px; margin-bottom:30px; font-size:16px;'>
+        Mappa 3d interattiva, che ha l'obiettivo di mostrare come sono 
+        distribuiti i dati all'interno dello stato di <span style = "color: orange; font-weight: bold;">Washington</span>.  
+        Delle barre più alte, o colori che tendono al rosso, indicano una maggior concentrazione di dati
+        in quella zona dello stato.
+    </div>
+    '''
     
     return text
 
@@ -1071,11 +1083,12 @@ def dashboard_main():
 
     st.title('Vendita auto BEV/PHEV')
     c1 = st.container(border=False)
+    c1.subheader('Vendita annuale di auto BEV e PHEV')
 
     col1c1, col2c1 = c1.columns(2)
 
     col1c1.altair_chart(year_pop_chart(data), use_container_width=True)
-    col2c1.markdown(text_year_pop_chart(data.height))
+    col2c1.markdown(text_year_pop_chart(data.height), unsafe_allow_html=True)
   
     #----------------------------------------------------------------------------------------------------
     #SECONDO CONTAINER
@@ -1086,14 +1099,14 @@ def dashboard_main():
     '''
 
     c2 = st.container(border=False)
-    c2.subheader('Totale Vendite')
+    c2.subheader('Totale vendite per produttore')
 
     col1c2, mid,col2c2 = c2.columns([3,1,2])
     #col2c2.dataframe(make_pop_data(data))
     
-    col2c2.dataframe(make_pop_data(data), height=300)
+    col2c2.dataframe(make_pop_data(data))
     
-    col1c2.markdown(text_make_pop_data(data))
+    col1c2.markdown(text_make_pop_data(data), unsafe_allow_html=True)
     
     #----------------------------------------------------------------------------------------------------
     #TERZO CONTAINER
@@ -1105,7 +1118,7 @@ def dashboard_main():
 
     c3 = st.container(border=False)
     c3.title('Distribuzione vendite stato Washington')
-    c3.markdown(map_3d_text())
+    c3.markdown(map_3d_text(), unsafe_allow_html=True)
     c3.pydeck_chart(map_3d(data))
 
     st.divider()
@@ -1117,10 +1130,26 @@ def dashboard_main():
     Container in cui è presente una grafico a linee che indica il numero di vendite annuali di al massimo
     3 produttori selezionati a tramite una multiselect
     '''
+    st.title('Analisi vendita per produttore')
+    st.markdown("""
+        <div style='border:2px solid orange; padding:20px; border-radius:5px;margin-bottom:50px;font-size:16px;'>
+            In questa sezione della dashboard, l'obiettivo è quello di analizzare i <span style="color: orange; font-weight: bold">dati dei vari produttori</span>.<br>
+            Si vuole fare questo in modo interattivo, mostrando approffondimenti sugli argomenti: 
+            <ul>
+                <li>Vendita annuale per produttore</li>
+                <li>Proporzione vendita dei vari modelli</li>
+                <li>Proporzione vendita per tipologia del motore</li>
+                <li>Report su un solo produttore scelto</li>
+            </ul>
+            <span style="color: orange; font-weight: bold">Informazioni</span>
+            <ul>
+                <li>Sull'analisi delle proporzione di vendita per modello, i modelli di auto che hanno una percentuale totale
+                inferiore all' 1%, sono stati raggruppati in una categoria: <span style="font-weight: bold">Altro</span>.</li>
+            </ul>
+        </div>
+        """, unsafe_allow_html=True)
 
     c4 = st.container(border=False)
-    c4.title('Analisi vendita per produttore')
-
     #make_selection è una lista di al massimo 3 marchi
     st.session_state.make_selection = c4.multiselect('''E' possibile scegliere al massimo 3 marchi''',
                                                      make_list(data), max_selections=3, default=['TESLA'])
@@ -1246,12 +1275,16 @@ def dashboard_main():
 
     c8.subheader('Distribuzioni autonomia delle auto')
 
-    c8.write(f'''In questa parte della dashboard, si vuole effettuare un'analisi sull'autonomia delle auto presenti nel dataset.  
-             La prima cosa che si nota è che la dimensione del dataset è diminuita, questo perchè nel dataset origininale
-             non tutti i record hanno valorizzato il valore del campo dell'autonomia del motore elettrico in dotazione.  
-             In seguito, quando si farà riferimento al dataset in questa parte di analisi, il dataset preso in considerazione
-             sarà quello con i dati che dispongono del campo ***Electric Range***.  
-             Sulla destra si vede su quanti record è stata eseguita l'analisi.''')
+    c8.markdown("""
+        <div style='border:2px solid orange; padding:20px; border-radius:5px;margin-bottom:50px;font-size:16px;'>
+            In questa parte della dashboard, si vuole effettuare un'analisi sull'autonomia delle auto presenti nel dataset.
+            La prima cosa che si nota è che la <strong>dimensione del dataset è diminuita</strong>, questo perchè nel dataset origininale
+            non tutti i record hanno valorizzato il valore del campo dell'autonomia del motore elettrico in dotazione.<br> <br>
+            In seguito, quando si farà riferimento al dataset in questa parte di analisi, il dataset preso in considerazione
+            sarà quello con i dati che <span style="color: orange;"><strong>dispongono del campo Electric Range</strong></span>.
+            Sulla destra, sotto l'etichetta: <strong>Numero Totale Auto</strong>,  si vede su quanti record è stata eseguita l'analisi.
+        </div>
+        """, unsafe_allow_html=True)
 
     col1c8, col2c8 = c8.columns(spec=[.6,.4])
 
@@ -1290,17 +1323,21 @@ def dashboard_main():
     col1c9, col2c9, col3c9 = c9.columns(3)
     col3c9.altair_chart(electric_range_result[0])
     col2c9.write(electric_range_result[1])
-    col1c9.write('''A destra si vedono i dati su autonomia massima e minima per i 
-                 produttore presenti nel dataset.''')
-    col1c9.write(''':orange[***Nota Bene***]  
-                 La scelta di mostrare sia il dataframe che il grafico è per motivi di visualizzazione. 
-                 Se fossero stati inseriti tutti i produttori all'interno del grafico, il risultato sarebbe
-                 stato un grafico molto lungo in cui molti produttori avrebbero avuto una **riga verticale
-                 molto fina**, perdendo l'**efficacia** del grafico.  
-                 Per questo motivpo è stato inserito il dataframe.''')
-    col1c9.write(''':orange[***Considerazione***]  
-                 Potrebbe essere interessante vedere come sono distribuite le vendite all'interno del range
-                 di autonomia dei vari produttori.''')
+    
+    col1c9.markdown("""
+        <div style='border:2px solid orange; padding:20px; border-radius:5px;margin-right:40px; font-size:16px;'>
+            <h3 style='color:orange;'>Nota Bene</h3>
+            La scelta di mostrare sia il dataframe che il grafico è per motivi di visualizzazione. 
+            Se fossero stati inseriti tutti i produttori all'interno del grafico, il risultato sarebbe
+            stato un grafico molto lungo in cui molti produttori avrebbero avuto una 
+            <strong>riga verticale molto fina</strong>, perdendo l'<strong>efficacia</strong> del grafico.
+            Per questo motivo è stato inserito il dataframe.            
+            <h3 style='color:orange; margin-top:20px;'>Considerazione</h3>
+            Potrebbe essere interessante vedere come sono distribuite le vendite all'interno del range
+            di autonomia dei vari produttori.
+        </div>
+        """, unsafe_allow_html=True)
+    
     
     #----------------------------------------------------------------------------------------------------
     #DECIMO CONTAINER
@@ -1313,10 +1350,28 @@ def dashboard_main():
     st.divider()
     c10 = st.container()
 
-    col1c10, col2c10 = c10.columns(spec=[0.8, 0.2])
+    col1c10, col2c10 = c10.columns(spec=[0.6, 0.4])
     col1c10.altair_chart(jitter_strip_plot(data))
-    col2c10.subheader('Spiegazione')
-
+    col2c10.markdown("""
+        <div style='border:2px solid orange; padding:10px; border-radius:5px;margin-bottom:15px;font-size:16px;'>
+            <span style="color: orange; font-weight: bold">Obiettivo del grafico</span>
+            <br>
+            Con questo grafico si vuole analizzare, in base alla tipologia del motore, come sono distribuiti 
+            i dati dell'autonomia del motore elettrico presente nelle auto. <br>      
+            <br>
+            <span style="color: orange; font-weight: bold">Consigli su interpretazione</span> <br>
+            Un punto indica che è presente un dato di un determinato valore di autonomia dell'auto. Quindi per non
+            sovrapporre i punti è stato aggiunto un valore casuale sull'asse verticale. Più una linea verticale è piena,
+            più sono i dati presenti con la stessa autonomia. <br><br>
+            <span style="color: orange; font-weight: bold">Esempio</span> <br> 
+            Consideriamo il range 140-160, si vede come le auto BEV abbiano delle linee molto fitte, mentre le auto 
+            PHEV presentino solo 2 punti isolati, quindi indica come siano molto più frequenti i motori di auto 
+            BEV rispetto alle auto PHEV con questo range di autonomia. <br><br>
+            <span style="color: orange; font-weight: bold">Informazioni</span> <br>
+            Per motivi di visualizzazione e di complessità di calcolo, quindi aumento di tempo per la visualizzazione
+            del grafico, i dati sono stati limitati a 10000.
+        </div>
+        """, unsafe_allow_html=True)
     #----------------------------------------------------------------------------------------------------
     #UNDICESIMO CONTAINER
     st.divider()
