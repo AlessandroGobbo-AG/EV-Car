@@ -1,6 +1,7 @@
 import streamlit as st
 from login import authentication
 from dashboard import dashboard_main
+from admin import admin_main
 
 logo_folder = 'LOGO/Logo.png'
 
@@ -85,7 +86,6 @@ if __name__ == '__main__':
         elif page_to_see == 'Dashboard':
             dashboard_main()
         else: 
-            st.title('Pagina Admin')
-            st.write('Qui vedi la pagina di admin in cui puoi fare tante cose')
+            admin_main()
             
         logout()

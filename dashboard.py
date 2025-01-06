@@ -1405,6 +1405,13 @@ def dashboard_main():
         """, unsafe_allow_html=True)
     #----------------------------------------------------------------------------------------------------
     #UNDICESIMO CONTAINER
+
+    '''
+    Container in cui sarà presente un jitter strip plot in cui si vedrà come sono distribuite le autonomie 
+    delle auto dei produttori scelti a seguito di un multiselect. 
+    Inoltre, per ogni produttore, si vedrà la distribuzione per la tipologia del motore, tramite l'uso dei colori.
+    '''
+
     st.divider()
     
     c11 = st.container()
@@ -1446,10 +1453,25 @@ def dashboard_main():
     st.divider()
 
     # Parte dell'analisi sui prezzi.
+
+    '''
+    Parte della dashboard in cui si prova a fare una breve analisi dei prezzi. 
+    Questa parte risulta meno esaustiva a causa dei pochi dati rispetto alla dimensione del dataset.
+    Il problema principale è che il dato sui prezzi non viene più aggiunto dal 2019.
+    '''
+
     st.header('Analisi sui prezzi')
     st.write('')
 
     #DODICESIMO CONTAINER
+
+    '''
+    Container in cui sarà presente un grafico sull'andamento medio dei prezzi delle auto.
+    Per eseguire ciò viene usato un grafico a linee. 
+    Inoltre è affiancato da etichette che presentano il prezzo medio delle auto, e il prezzo medio delle auto 
+    BEV e PHEV.
+    '''
+    
     c12 = st.container()
     c12.subheader('Andamento annuale del prezzo medio delle auto')
 
@@ -1482,6 +1504,13 @@ def dashboard_main():
     cc3c12.metric('Prezzo medio Auto PHEV', value = st.session_state.mean_price[2])
     #----------------------------------------------------------------------------------------------------
     #TREDICESIMO CONTAINER
+
+    '''
+    Container in cui sarà presente uno scatter plot in cui si vuole vedere la distribuzione del prezzo 
+    rispetto all'autonomia delle auto. 
+    E' presente una differenziazione della tipologia dei motori tramite l'uso dei colori. 
+    '''
+
     st.divider()
     c13 = st.container()
     c13.subheader('Distribuzione delle vendite per prezzo e autonomia')
