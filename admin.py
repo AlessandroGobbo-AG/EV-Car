@@ -2,7 +2,7 @@ import streamlit as st
 import polars as pl
 from pathlib import Path
 import sqlite3
-
+import time
 
 def database_data():
     '''
@@ -78,6 +78,9 @@ def admin_main():
     Funzione che crea la pagina main dell'admin
     '''
 
+    if 'admin_key' not in st.session_state:
+        st.session_state.admin_key = 0
+
     #creaiamo un dataframe degli utenti presenti nel database
     user = database_data()
 
@@ -85,19 +88,38 @@ def admin_main():
     Parte della pagina admin in cui si vedono le informazioni degli utenti presenti nel sistema.
     '''
 
-    st.title('Informazioni sugli utenti presenti nel sistema')
+    st.markdown(f'''<h1 style='color: orange; text-align: center;'>
+                        Informazioni sugli utenti registrati
+                        </h1>  
+                        ''', unsafe_allow_html=True)
 
+    st.write('')
     #Creazione del container in cui saranno presenti le informazioni generali sugli utenti del database
     c1 = st.container()
 
     col1c1, col2c1 = c1.columns(2)
 
     #colonna 1 DX
-    col1c1.metric(label='Numero di utenti registrati', value=user.height)
+    col1c1.markdown(f'''<h3 style='color: white'>
+                        Numero Utenti Registrati
+                        </h3>  
+                        ''', unsafe_allow_html=True)
+    col1c1.metric(label='utenti registrati', value=user.height-1)
+    col1c1.divider()
+    col1c1.markdown(f'''<h3 style='color: white'>
+                        Tabella Permessi-Numero Utenti
+                        </h3>  
+                        ''', unsafe_allow_html=True)
+    col1c1.markdown('''Tabella che indica quanti utenti sono registrati con i relativi permessi''')
     col1c1.write(user_type_number(user))
 
     #colonna 2 SX
+    col2c1.markdown(f'''<h3 style='color: white'>
+                        Lista degli Utenti
+                        </h3>  
+                        ''', unsafe_allow_html=True)
     col2c1.write(user.filter(pl.col('User Type') != 'admin'))
+    
 
     #-----------------------------------------------------------------------------------------------
     st.divider()
@@ -106,8 +128,11 @@ def admin_main():
     Parte della pagina admin in cui si può cambiare il permesso di un utente del sistema.
     '''
 
-    st.title('Modifica permessi utente')
-
+    st.markdown(f'''<h1 style='color: orange; text-align: center;'>
+                        Modifica Permessi Utente
+                        </h1>  
+                        ''', unsafe_allow_html=True)
+    st.write('')
     #Settaggio delle sessioni di stato
 
     #sessione stato: mail a cui cambiare permesso
@@ -120,26 +145,43 @@ def admin_main():
 
     
     #Creazione del container in cui sarà contenuto la parte di modifica dei permessi dell'utente
-    c2 = st.container()
+    c2 = st.container(border=True)
 
     col1c2 , col2c2 = c2.columns(2)
 
     #colonna 1 DX
 
+    col1c2.markdown(f'''<h3 style='color: white'>
+                        Seleziona utente da modificare
+                        </h3>  
+                        ''', unsafe_allow_html=True)
+
     st.session_state.user_change_permission = col1c2.selectbox('Selezione username utente', 
                    options=user.filter(pl.col('User Type') != 'admin')['Email'].to_list())
     
-    col1c2.write(user.filter(pl.col('Email') == st.session_state.user_change_permission)['Username'].item())
+    col1c2.markdown(f'''<h3 style='color: white'>
+                        Verifica che E-mail corrisponda a utente ricercato
+                        </h3>  
+                        ''', unsafe_allow_html=True)
+    col1c2.write(f'''Email: {user.filter(pl.col('Email') == st.session_state.user_change_permission)['Username'].item()}''')
 
     #colonna 2 SX 
+    col2c2.markdown(f'''<h3 style='color: white'>
+                        Nuovo permesso da assegnare
+                        </h3>  
+                        ''', unsafe_allow_html=True)
     st.session_state.permission_choice = col2c2.selectbox(f'''Seleziona nuovo permesso per {st.session_state.user_change_permission}''', 
                                                       options=user.filter(pl.col('User Type') != 'admin')['User Type'].unique().to_list())
 
-    submit_change = c2.button('Cambia Tipo Utente')
+    col2c2.write('\n \n')
+    submit_change = col2c2.button('Cambia Tipo Utente', type="primary")
     if submit_change:
         if change_user_type(st.session_state.permission_choice,st.session_state.user_change_permission):
             st.success('Cambiato il permesso')
-            #user = database_data()
+            user = database_data()
+            st.session_state.user_change_permission = ''
+            st.session_state.admin_key += 1
+            time.sleep(1)
             st.rerun()
 
     

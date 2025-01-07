@@ -2,6 +2,7 @@ import streamlit as st
 from login import authentication
 from dashboard import dashboard_main
 from admin import admin_main
+from sale import sale_main
 
 logo_folder = 'LOGO/Logo.png'
 
@@ -81,8 +82,7 @@ if __name__ == '__main__':
         page_to_see = page_list(st.session_state.user_state['user_type'])
 
         if page_to_see == 'Vendita':
-            st.title('Vendita auto')
-            st.write('Aggiungerai una vendita in questa pagina')
+            sale_main()
         elif page_to_see == 'Dashboard':
             dashboard_main()
         else: 
