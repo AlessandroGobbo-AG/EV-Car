@@ -2,18 +2,29 @@ import streamlit as st
 import polars as pl
 from pathlib import Path
 import re
+import time
 
 @st.cache_data
 def read_data():
     '''
     Funzione che legge i dati del file csv del percorso: DATA/data.csv
 
-    Returns:
+    RETURN
         dataframe: dataframe dei dati
     '''
     data_dir = Path('DATA')
     data = pl.read_csv( data_dir/'data.csv')
     return data
+
+def write_data(data):
+    '''
+    Funzione che scrive nuovi dati sul file csv data.csv
+
+    PARAM
+        dataframe: dati da scrivere
+    '''
+    data_dir = Path('DATA')
+    data.write_csv(data_dir/'data.csv', separator=',')
 
 
 def max_min_coord(data, city):
@@ -38,15 +49,15 @@ def max_min_coord(data, city):
             coord = (float(numb[0]), float(numb[1]))
             coord_list.append(coord)
 
-    df = pl.DataFrame(coord_list, schema=['lon', 'lat'])
+    df = pl.DataFrame(coord_list, schema=['lon', 'lat'], orient="row")
 
     df = (
         df
         .select(
-            pl.col('lon').max().alias('lon_max'),
-            pl.col('lon').min().alias('lon_min'),
-            pl.col('lat').max().alias('lat_max'),
-            pl.col('lat').min().alias('lat_min')
+            pl.col('lon').round(4).max().alias('lon_max'),
+            pl.col('lon').round(4).min().alias('lon_min'),
+            pl.col('lat').round(4).max().alias('lat_max'),
+            pl.col('lat').round(4).min().alias('lat_min')
         )
     )
     return df
@@ -73,8 +84,17 @@ def sale_main():
             <ul>  
                 <li>L'inserimento avverrà un campo alla volta. Per gli inserimenti di campi di testi, l'ordine sarà ordine <b>alfabetico</b>.</li>
                 <li>Mentre per i campi numerici ci saranno dei <b>controlli</b>, ad esempio nell'autonomia e nella localizzazione della vendita.</li>
-                <li>Si ricorda che l'autonomia delle auto è espressa in miglia (1 miglio = 1.6 chilometri).
+                <li>Si ricorda che l'autonomia delle auto è espressa in miglia (1 miglio = 1.6 chilometri).</li>
             </ul>
+            <h4 style="text-align:center; color: orange">Informazioni su compilazione form</h4>
+                <ul>
+                    <li>Le contee presenti nelle scelte sono quelle presenti nel dataset d'origine, dunque al di fuori
+                        dello stato di Washington</li>
+                    <li>Dal punto precedente, potrebbe essere che alcune contee non presentino tutte le città presenti, le città
+                        sceglibili sono quelle che sono presenti nel dataset d'origine.</li>
+                    <li>Le coordinate hanno il vincolo delle coordinate massime e minime della città scelta,
+                        presenti nel dataset d'origine.</li>
+                </ul>
         </div>
         ''', unsafe_allow_html=True
     )
@@ -88,6 +108,9 @@ def sale_main():
 
     if 'new_sale_city' not in st.session_state:
         st.session_state.new_sale_city = ''
+
+    if 'new_sale_state' not in st.session_state:
+        st.session_state.new_sale_state = ''
 
     if 'new_sale_make' not in st.session_state:
         st.session_state.new_sale_make = ''
@@ -113,6 +136,12 @@ def sale_main():
     if 'new_sale_check_lat' not in st.session_state:
         st.session_state.new_sale_check_lat = ''
 
+    if 'new_sale_longitude' not in st.session_state:
+        st.session_state.new_sale_longitude = ''
+    
+    if 'new_sale_latitude' not in st.session_state:
+        st.session_state.new_sale_latitude = ''
+
     #Aggiunta di una nuova vendita
     st.markdown(f'''
                 <h3 style='text-align: center;'>
@@ -129,7 +158,10 @@ def sale_main():
                                                   options= sorted(data
                                                                   .filter(pl.col('County') == st.session_state.new_sale_county)['City']
                                                                   .unique().to_list()))
-    
+    st.session_state.new_sale_state = (data
+                                       .filter(pl.col('City') == st.session_state.new_sale_city)['State']
+                                       .unique().item())
+
     st.session_state.new_sale_make = c1.selectbox(label='''Seleziona il produttore dell'auto''',
                                                   options = sorted(data['Make'].unique().to_list()))
     
@@ -156,18 +188,40 @@ def sale_main():
     c1.write(st.session_state.new_sale_check_coord)
 
     c1.write('Inserisci le coordinate della vendita')
-    c1.number_input('Inserisci Longitudine', 
+    st.session_state.new_sale_longitude = c1.number_input('Inserisci Longitudine', 
                     min_value=st.session_state.new_sale_check_coord['lon_min'].item(),
                     max_value=st.session_state.new_sale_check_coord['lon_max'].item(),
                     step=0.0001,
                     format="%.4f")
 
-    c1.number_input('Inserisci Latitudine', 
+    st.session_state.new_sale_latitude = c1.number_input('Inserisci Latitudine', 
                     min_value=st.session_state.new_sale_check_coord['lat_min'].item(),
                     max_value=st.session_state.new_sale_check_coord['lat_max'].item(),
                     step=0.0001,
                     format="%.4f")
 
+
+    submit_sale = c1.button('Conferma scelte', type="primary")
+    if submit_sale:
+        new_row = pl.DataFrame([dict(zip(data.columns, [
+            st.session_state.new_sale_county,
+            st.session_state.new_sale_city,
+            st.session_state.new_sale_state,
+            st.session_state.new_sale_year_model,
+            st.session_state.new_sale_make,
+            st.session_state.new_sale_model,
+            st.session_state.new_sale_engine_type,
+            st.session_state.new_sale_range,
+            0,
+            f'POINT ({st.session_state.new_sale_longitude} {st.session_state.new_sale_latitude})'
+        ]))])
+
+        data = pl.concat([data, new_row])
+        write_data(data)
+        c1.success('Vendita eseguita con successo')
+        time.sleep(2)
+        st.rerun()
+        
 
 if __name__ == '__main__':
     print('Hello world')

@@ -47,6 +47,7 @@ def user_type_number(data):
         .agg(
             pl.col('User Type').count().alias('Total')
         )
+        .sort(pl.col('User Type'))
     )
 
     return number_user
@@ -156,11 +157,11 @@ def admin_main():
                         </h3>  
                         ''', unsafe_allow_html=True)
 
-    st.session_state.user_change_permission = col1c2.selectbox('Selezione username utente', 
+    st.session_state.user_change_permission = col1c2.selectbox('Selezione E-mail utente', 
                    options=user.filter(pl.col('User Type') != 'admin')['Email'].to_list())
     
     col1c2.markdown(f'''<h3 style='color: white'>
-                        Verifica che E-mail corrisponda a utente ricercato
+                        Verifica che Username corrisponda a Email desiderata
                         </h3>  
                         ''', unsafe_allow_html=True)
     col1c2.write(f'''Email: {user.filter(pl.col('Email') == st.session_state.user_change_permission)['Username'].item()}''')
