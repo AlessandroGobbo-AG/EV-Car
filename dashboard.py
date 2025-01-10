@@ -675,7 +675,7 @@ def electric_range(data):
         .encode(
             x = alt.X('min(Electric Range):Q').scale(domain=[-15, 350]).title('Electric Range'),
             x2 = 'max(Electric Range):Q',
-            y = alt.Y('Make:N', sort = '-x').title(None),
+            y = alt.Y('Make:N', sort = '-x'),
             color=alt.value('orange')
         )
     )
@@ -710,19 +710,18 @@ def electric_range(data):
 
 
 def engine_distribution(data):
-
     '''
     Funzione che ritorna un grafico che mostra la distribuzione di auto vendute in base alla tipologia 
     del motore e l'autonomia del motore elettrico.
 
     PARAM
-        dataset: dataset delle auto
+        data: dataset delle auto
 
     RETURN
         chart: grafico in cui si mostra la distribuzione per colore delle auto vendute in base all'autonomia
     '''
 
-    #Organizziamo il dataset per ottenere un dataset utile per creare il grafico
+    # Organizziamo il dataset per ottenere un dataset utile per creare il grafico
     data = (
         data
         .select('Electric Vehicle Type', 'Electric Range')
@@ -735,7 +734,7 @@ def engine_distribution(data):
         .agg(
             Count = pl.col('Electric Range').count()
         )
-        .sort(pl.col('Electric Range'))
+        .sort('Electric Range')
     )
 
     data = data.with_columns(
@@ -745,19 +744,21 @@ def engine_distribution(data):
         })
     )
 
+    # Convertiamo il dataset in un DataFrame Pandas per Altair
+    df = data.to_pandas()
+
     base = (
-        alt.Chart(data)
+        alt.Chart(df)
         .mark_bar(cornerRadiusTopLeft=3, cornerRadiusTopRight=3, opacity=0.8)
         .encode(
-            x = ('Electric Range:Q'),
-            y = alt.Y('Count:Q'),
-            color= alt.Color('Electric Vehicle Type:N', scale=alt.Scale(scheme='purpleorange'))
+            x=alt.X('Electric Range:Q', title='Electric Range(interval of 10)',bin=alt.Bin(step=10)),
+            y=alt.Y('Count:Q'),
+            color=alt.Color('Electric Vehicle Type:N', scale=alt.Scale(scheme='purpleorange'), legend=None)
         )
-        .properties(width=800)  
-        
     )
 
     return base
+
 
 
 def range_label(data):
@@ -856,7 +857,7 @@ def jitter_strip_plot(_data):
         jitter = "sqrt(-2*log(random()))*cos(2*PI*random())"
     ).properties(
         height= 500,
-        width = 650
+        width = 500
     )
 
     return gaussian_jitter.resolve_scale(yOffset='independent')

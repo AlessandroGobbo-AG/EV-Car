@@ -55,6 +55,14 @@ def user_type_number(data):
 def change_user_type(User_Type, Mail):
     '''
     Funzione che va a cambiarere sul database i permessi dell'utente selezionato
+
+    PARAM
+        string: permesso che si vuole assegnare all'utente
+        string: mail dell'utente che si vuole modificare
+
+    RETURN
+        boolean: True se avviene correttamente, 
+                 False se viene sollevata eccezzione
     '''
 
     sql_update = '''UPDATE USER SET User_Type = ? WHERE Mail = ?'''
@@ -71,7 +79,27 @@ def change_user_type(User_Type, Mail):
     finally:
         db.close()
     return True
+
+def delete_user_by_email(email):
+    '''
+    Funziona che va ad eliminare dal database degli utenti, l'utente registrato con la mail
+    passata come parametro
+
+    PARAM
+        string: mail dell'utente che si vuole modificare
     
+    RETURN 
+        boolean: True se viene eliminato con successo
+                 False se viene sollevata eccezione
+    '''
+
+    sql_delete = ''''''
+    db_dir = Path('DATABASE')
+    db = sqlite3.connect(db_dir/'user.db')
+    cursor = db.cursor()
+
+    
+    return True 
 
 def admin_main():
 
@@ -161,7 +189,7 @@ def admin_main():
                    options=user.filter(pl.col('User Type') != 'admin')['Email'].to_list())
     
     col1c2.markdown(f'''<h3 style='color: white'>
-                        Verifica che Username corrisponda a Email desiderata
+                        Verifica  Username 
                         </h3>  
                         ''', unsafe_allow_html=True)
     col1c2.write(f'''Email: {user.filter(pl.col('Email') == st.session_state.user_change_permission)['Username'].item()}''')
@@ -174,7 +202,11 @@ def admin_main():
     st.session_state.permission_choice = col2c2.selectbox(f'''Seleziona nuovo permesso per {st.session_state.user_change_permission}''', 
                                                       options=user.filter(pl.col('User Type') != 'admin')['User Type'].unique().to_list())
 
-    col2c2.write('\n \n')
+    col2c2.write('')
+    col2c2.write('')
+    col2c2.write('')
+    col2c2.write('')
+
     submit_change = col2c2.button('Cambia Tipo Utente', type="primary")
     if submit_change:
         if change_user_type(st.session_state.permission_choice,st.session_state.user_change_permission):
@@ -182,9 +214,36 @@ def admin_main():
             user = database_data()
             st.session_state.user_change_permission = ''
             st.session_state.admin_key += 1
-            time.sleep(1)
+            time.sleep(2)
             st.rerun()
 
+    #-------------------------------------------------------------
+    # Sezione cancellazione utente
+
+    st.divider()
+    st.markdown(f'''<h1 style='color: orange; text-align: center;'>
+                        Elimina utente da sistema
+                        </h1>  
+                        ''', unsafe_allow_html=True)
+    
+    st.write('')
+
+    c3 = st.container(border= True)
+
+    c3.subheader("Seleziona Email dell'utente da eliminare dal sistema")
+
+    if 'user_to_delete' not in st.session_state:
+        st.session_state.user_to_delete = ''
+
+    st.session_state.user_to_delete = c3.selectbox("E-mail dell'utente",
+                                                   options=user.filter(pl.col('User Type') != 'admin')['Email'].to_list())
+    
+
+    col1c3, col2c3 = c3.columns([.84,.16])
+    submit_delete = col2c3.button('Elimina utente', type='primary')
+
+    if submit_delete:
+        c3.success('utente eliminato con successo')
     
 if __name__ == '__main__':
     admin_main()
