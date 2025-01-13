@@ -177,6 +177,7 @@ def make_per_year (data, make):
             Vendita_per_marca = pl.col('Make').count()
         )
         .filter(pl.col('Make').is_in(make))
+        .filter(pl.col('Model Year') < 2025)
     )
 
     chart = alt.Chart(data).encode( 
@@ -1009,7 +1010,7 @@ def year_mean_price(data):
             x='Model Year:O',
             y='Mean:Q',
         ).properties(
-            width = 500
+            width = 400
         )
     )
 

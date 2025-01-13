@@ -93,12 +93,19 @@ def delete_user_by_email(email):
                  False se viene sollevata eccezione
     '''
 
-    sql_delete = ''''''
+    sql_delete = '''DELETE FROM USER WHERE Mail = ?'''
     db_dir = Path('DATABASE')
     db = sqlite3.connect(db_dir/'user.db')
     cursor = db.cursor()
 
-    
+    try: 
+        cursor.execute(sql_delete, (email,))
+        db.commit()
+    except sqlite3.Error as e:
+        st.error(f"Errore nel database: {e}")
+        return False
+    finally:
+        db.close()
     return True 
 
 def admin_main():
@@ -200,7 +207,7 @@ def admin_main():
                         </h3>  
                         ''', unsafe_allow_html=True)
     st.session_state.permission_choice = col2c2.selectbox(f'''Seleziona nuovo permesso per {st.session_state.user_change_permission}''', 
-                                                      options=user.filter(pl.col('User Type') != 'admin')['User Type'].unique().to_list())
+                                                      options=['Analista', 'Venditore'])
 
     col2c2.write('')
     col2c2.write('')
@@ -243,8 +250,15 @@ def admin_main():
     submit_delete = col2c3.button('Elimina utente', type='primary')
 
     if submit_delete:
-        c3.success('utente eliminato con successo')
-    
+        if delete_user_by_email(st.session_state.user_to_delete):
+            c3.success('utente eliminato con successo')
+            user = database_data()
+            st.session_state.user_to_delete = ''
+            st.session_state.admin_key += 1
+            time.sleep(2)
+            st.rerun()
+
+
 if __name__ == '__main__':
     admin_main()
     

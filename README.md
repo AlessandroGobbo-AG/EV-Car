@@ -19,6 +19,7 @@ Il linguaggio di programamzione usato è PYTHON, principalmente sono state usate
 - *Streamlit*: per la parte front-end
 - *Polars*: manipolazione dei dati e analisi
 - *Altair*: creazione di grafici
+- *UV*: Package Management
 
 ## REQUISITI DI SISTEMA E DIPENDENZE
 
@@ -63,14 +64,14 @@ Il recupero della password avviene tramite una verifica via mail,
 un volta inserito il codice a 6 cifre è possibile procedere al cambiamento
 della password.
 
-## PAGINA DASHBOARD
+### PAGINA DASHBOARD
 
 La pagina **dashboard.py** contiene tutta la parte di analisi
 grafica del dataset scelto, tramite elementi interattivi.  
 I grafici sono tutti accompagnati da legende, spiegazioni o label che
 vanno ad incrementare le informazioni che si vogliono comunicare.  
 
-### Sezioni della Dashboard
+#### Sezioni della Dashboard
 
 - Sezione di analisi delle delle immatricolazioni delle auto possedute
 dagli abitanti dello stato di Washington.  
@@ -83,7 +84,7 @@ le differenze delle auto BEV da quelle PHEV.
 > **CHI PUO' VEDERE QUESTA PAGINA**  
 > Questa pagina è visibile da tutti gli utenti registrati all'applicazione
 
-## PAGINA DI VENDITA
+### PAGINA DI VENDITA
 
 Nella pagina **sale.py** avviene la fase di inserimento di una nuova immatricolazione
 nello stato di Washington.  
@@ -94,7 +95,7 @@ Questo avviene tramite la compilazione dei vari campi.
 > -*ADMIN*  
 > -*VENDITORE*
 
-## PAGINA DI ADMIN
+### PAGINA DI ADMIN
 
 Nella pagina **admin.py** contiene la parte di analisi degli utenti iscritti
 all'applicazione, inoltre è possibile modificare i permessi ed eliminare
@@ -112,3 +113,46 @@ Passaggi necessari per l'avvio del progetto.
 ```bash
 git clone https://github.com/AlessandroGobbo13/PROJECT_SE2.git
 ```
+
+### 2. Avvio del programma
+
+Per avviare il programma, aprire il terminale e spostarsi all'interno della cartella del progetto.  
+Un volta fatto, eseguire il comando riportato sotto.
+
+```bash
+uv run stramlit run home.py
+```
+
+### 3. Accesso alle pagine
+
+L'accesso alle pagine si può testare tramite le credenziali di prova:
+
+> **CREDENZIALI UTENTI PER TEST**  
+> **-E-Mail**: admin **-Password**: passwordAdmin  
+> **-E-Mail**: venditore **-Password**: passwordVenditore  
+> **-E-Mail**: analista **-Password**: passwordAnalista
+
+### 4. Consigli su utilizzo
+
+Per l'utilizzo completo si consigli di accedere con le credenziali di ADMIN.  
+Si consiglia però utilizzare la pagina *Personale* senza toccare i dati del database, quindi prima creare un nuovo utente con credenziali a piacere, meglio utilizzare un mail personale così da provare la sezione *Recupera Password*.
+
+## MIGLIORAMENTI FUTURI
+
+Di seguito verranno elencati i miglioramenti o progetti che si vogliono implementare in futuro.
+
+### Miglioramenti
+
+- **Associare al dataset ulteriori dataset per aumentare l'informazione e approfondire l'analisi**.
+Ad esempio si vuole approfondire la parte di analisi dei prezzi, magari trovando dataset in cui è possibile eseguire analisi di serie storiche e vereificare se esistono correlazione tra prezzo-autonomia-numero di vendite.
+- **Approfondire l'analisi per quanto riguarda il reparto tecnico delle auto elettriche e plug-in**. Questo per analizzare se vengono fatte delle scelte in fase di progettazione in base alla tipologia di motore.
+- Migliorare la parte di gestione della pagina *Admin* e di *Vendita*, aumentando le operazioni possibili che si possono eseguire. Ad esempio nella parte di vendita risulterebbe molto interessante trovare un dataset in cui sono presenti insiemi di coordinate delle città degli stati uniti, così da verificare che la scelta della coordinata sia effettivamente all'interno dell'area della città.
+Attualmente la verifica avviene tramite la verifica che la coordinata inserita sia all'interno del range (MAX, MIN) delle coordinate delle città presenti nel dataset.
+- **Migliorare l'ottimizzazione della manipolazione dei dati**. Analizzare i tempi di manipolazione dei dati e cercare soluzioni alternative per migliorare l'efficienza.
+
+### PROGETTI FUTURI
+
+Sarebbe interessante creare un gestionale web based, partendo dai dati del dataset, manipolandoli e assegnando (in modo casuale) il mese di vendita ai record, utilizzando **DJANGO**.  
+A differenza del progetto di adesso, sarebbe interessante utilizzare un database *POSTGRE SQL*, in cui verrebbero importati i dati.  
+Con i dati di vendita sarebbe interessante l'analisi di serie storiche, facendo anche delle previsioni di vendita in futuro, e confrontare le previsioni con quelle ottenute tramite algoritmi di ML.  
+Inoltre, come ultima cosa, implementare la parte grafica stile DASHBOARD (dividere le varie parti in diverse pagine e mostrare le informazioni tutte su una schermata), implementando ulteriori grafici e label, per semplificare la visualizzazione.
