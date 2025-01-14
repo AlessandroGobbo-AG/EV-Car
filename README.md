@@ -4,7 +4,7 @@ Progetto Alessandro Gobbo di Sistemi di Elaborazione 2.
 
 ## ARGOMENTO DEL PROGETTO
 
-L'argomento principale del progetto è l'analisi delle auto elettriche (BEV) e ibride plug-in (PHEV) che sono
+L'argomento del progetto è l'analisi delle auto elettriche (BEV) e ibride plug-in (PHEV) che sono
 possedute da cittadini dello stato di **WASHINGTON**.  
 Questa analisi verrà accompagnati da elementi interattivi e grafici accompagnati da legende e/o spiegazioni.
 
@@ -73,7 +73,7 @@ vanno ad incrementare le informazioni che si vogliono comunicare.
 
 #### Sezioni della Dashboard
 
-- Sezione di analisi delle delle immatricolazioni delle auto possedute
+- Sezione di analisi delle immatricolazioni delle auto possedute
 dagli abitanti dello stato di Washington.  
 In questa sezione vengono analizzati i dati dei vari produttori e modelli presenti
 nel dataset.
@@ -102,7 +102,7 @@ all'applicazione, inoltre è possibile modificare i permessi ed eliminare
 utenti dal database.
 
 > **CHI PUO' VEDERE QUESTA PAGINA**  
-> Questa pagina è visibile dagli utenti che hanno il permesso di *ADMIN*, solitamente è solo 1.
+> Questa pagina è visibile dagli utenti che hanno il permesso di *ADMIN*.
 
 ## AVVIO DELL'APPLICAZIONE
 
@@ -134,6 +134,8 @@ L'accesso alle pagine si può testare tramite le credenziali di prova:
 
 ### 4. Consigli su utilizzo
 
+Per una visione ottimale del programma, bisogna impostare il tema: **DARK**.  
+Cliccare i *tre puntini in alto a destra -> Settings -> Choose app Theme*.  
 Per l'utilizzo completo si consigli di accedere con le credenziali di ADMIN.  
 Si consiglia però utilizzare la pagina *Personale* senza toccare i dati del database, quindi prima creare un nuovo utente con credenziali a piacere, meglio utilizzare un mail personale così da provare la sezione *Recupera Password*.
 
@@ -149,10 +151,10 @@ Ad esempio si vuole approfondire la parte di analisi dei prezzi, magari trovando
 - Migliorare la parte di gestione della pagina *Admin* e di *Vendita*, aumentando le operazioni possibili che si possono eseguire. Ad esempio nella parte di vendita risulterebbe molto interessante trovare un dataset in cui sono presenti insiemi di coordinate delle città degli stati uniti, così da verificare che la scelta della coordinata sia effettivamente all'interno dell'area della città.
 Attualmente la verifica avviene tramite la verifica che la coordinata inserita sia all'interno del range (MAX, MIN) delle coordinate delle città presenti nel dataset.
 - **Migliorare l'ottimizzazione della manipolazione dei dati**. Analizzare i tempi di manipolazione dei dati e cercare soluzioni alternative per migliorare l'efficienza.
+- **Migliorare l'utilizzo del notebook**, impostare il notebook seguendo uno standard più ordinato e migliorare l'output dei vari risultati.
 
 ### PROGETTI FUTURI
 
-Sarebbe interessante creare un gestionale web based, partendo dai dati del dataset, manipolandoli e assegnando (in modo casuale) il mese di vendita ai record, utilizzando **DJANGO**.  
-A differenza del progetto di adesso, sarebbe interessante utilizzare un database *POSTGRE SQL*, in cui verrebbero importati i dati.  
-Con i dati di vendita sarebbe interessante l'analisi di serie storiche, facendo anche delle previsioni di vendita in futuro, e confrontare le previsioni con quelle ottenute tramite algoritmi di ML.  
-Inoltre, come ultima cosa, implementare la parte grafica stile DASHBOARD (dividere le varie parti in diverse pagine e mostrare le informazioni tutte su una schermata), implementando ulteriori grafici e label, per semplificare la visualizzazione.
+Creare un gestionale Web-Based utilizzando il framework **DJANGO**.  
+Partire dai dati del dataset ma importandoli su un database *PostgreSQL*, aggiungendo anche l'informazione sul
+mese di vendita, per eseguire anche l'analisi della serie storica.  

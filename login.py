@@ -290,3 +290,7 @@ if __name__ == "__main__":
         st.write(f"Benvenuto {user_email}")
         st.write(f"Il tuo username è: {username}")
         st.write(f"Il tuo tipo utente è: {user_type}")
+
+'''
+414c455353414e44524f20474f42424f2ca53495354454d4920454c41424f52415a494f4e452032
+'''
