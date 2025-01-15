@@ -258,10 +258,8 @@ def admin_main():
             time.sleep(2)
             st.rerun()
 
-
 if __name__ == '__main__':
     admin_main()
     
-'''
-414c455353414e44524f20474f42424f2ca53495354454d4920454c41424f52415a494f4e452032
-'''
+    
+    

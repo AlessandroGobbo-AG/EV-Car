@@ -4,7 +4,7 @@ from pathlib import Path
 import re
 import time
 
-@st.cache_data
+# Remove the cache decorator since we need fresh data after each write
 def read_data():
     '''
     Funzione che legge i dati del file csv del percorso: DATA/data.csv
@@ -13,7 +13,7 @@ def read_data():
         dataframe: dataframe dei dati
     '''
     data_dir = Path('DATA')
-    data = pl.read_csv( data_dir/'data.csv')
+    data = pl.read_csv(data_dir/'data.csv')
     return data
 
 def write_data(data):
@@ -25,7 +25,6 @@ def write_data(data):
     '''
     data_dir = Path('DATA')
     data.write_csv(data_dir/'data.csv', separator=',')
-
 
 def max_min_coord(data, city):
     '''
@@ -62,14 +61,18 @@ def max_min_coord(data, city):
     )
     return df
 
-'''
-Funzione che crea Main del file
-'''
 def sale_main():
+    # Initialize session state for tracking if new data was added
+    if 'data_was_added' not in st.session_state:
+        st.session_state.data_was_added = False
 
-    #Importazione dei dati
-    data = read_data()
+    # Read fresh data only if it's the first load or if new data was added
+    if 'current_data' not in st.session_state or st.session_state.data_was_added:
+        st.session_state.current_data = read_data()
+        st.session_state.data_was_added = False  # Reset the flag
     
+    data = st.session_state.current_data
+
     #Titolo della pagina
     st.markdown(f'''
                 <h1 style='text-align: center; color: orange'>
@@ -151,6 +154,7 @@ def sale_main():
     
     c1 = st.container(border=True)
 
+    # Scelta dei dati
     st.session_state.new_sale_county = c1.selectbox(label = 'Seleziona la contea',
                                                     options= sorted(data['County'].unique().to_list()))
     
@@ -201,6 +205,7 @@ def sale_main():
                     format="%.4f")
 
 
+    #Operazioni a seguito del button
     submit_sale = c1.button('Conferma scelte', type="primary")
     if submit_sale:
         new_row = pl.DataFrame([dict(zip(data.columns, [
@@ -216,16 +221,15 @@ def sale_main():
             f'POINT ({st.session_state.new_sale_longitude} {st.session_state.new_sale_latitude})'
         ]))])
 
-        data = pl.concat([data, new_row])
-        write_data(data)
+        # Update sessio state
+        st.session_state.current_data = pl.concat([st.session_state.current_data, new_row])
+        write_data(st.session_state.current_data)
+
+        # Flag aggiunta dati
+        st.session_state.data_was_added = True  
         c1.success('Vendita eseguita con successo')
         time.sleep(2)
         st.rerun()
-        
 
 if __name__ == '__main__':
     print('Hello world')
-
-'''
-414c455353414e44524f20474f42424f2ca53495354454d4920454c41424f52415a494f4e452032
-'''

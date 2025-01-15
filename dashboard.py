@@ -7,7 +7,6 @@ import pandas as pd
 from pathlib import Path
 
 
-@st.cache_data
 def read_data():
     '''
     Funzione che legge i dati del file csv del percorso: DATA/data.csv
@@ -1540,6 +1539,3 @@ def dashboard_main():
 if __name__ == '__main__':
     dashboard_main()
     
-'''
-414c455353414e44524f20474f42424f2ca4e4f4e20484f20505245534f204953504952415a494f4e45204441204e455353554e205349544f20504552204920434f4c4f52492e
-'''
