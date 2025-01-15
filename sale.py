@@ -4,7 +4,7 @@ from pathlib import Path
 import re
 import time
 
-# Remove the cache decorator since we need fresh data after each write
+
 def read_data():
     '''
     Funzione che legge i dati del file csv del percorso: DATA/data.csv
@@ -62,11 +62,10 @@ def max_min_coord(data, city):
     return df
 
 def sale_main():
-    # Initialize session state for tracking if new data was added
+    # Tracciamento aggiunta dei dati
     if 'data_was_added' not in st.session_state:
         st.session_state.data_was_added = False
 
-    # Read fresh data only if it's the first load or if new data was added
     if 'current_data' not in st.session_state or st.session_state.data_was_added:
         st.session_state.current_data = read_data()
         st.session_state.data_was_added = False  # Reset the flag
